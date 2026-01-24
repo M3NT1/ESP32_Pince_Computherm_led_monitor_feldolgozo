@@ -1,0 +1,8 @@
+{
+  "zones": [],
+  "esp32_cam_url": "http://192.168.1.100",
+  "mqtt_broker": "localhost",
+  "mqtt_port": 1883,
+  "mqtt_user": "",
+  "mqtt_password": ""
+}

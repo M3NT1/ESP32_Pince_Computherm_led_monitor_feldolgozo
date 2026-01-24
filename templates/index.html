@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-CAM LED Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            background: #e0e0e0;
+        }
+        
+        .tab.active {
+            background: white;
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .section {
+            background: #f9f9f9;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.danger {
+            background: linear-gradient(135deg, #f85032 0%, #e73827 100%);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        #imageCanvas {
+            display: block;
+            cursor: crosshair;
+            max-width: 100%;
+        }
+        
+        .zones-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .zone-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .zone-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .zone-card.active {
+            border-color: #38ef7d;
+            background: #f0fff4;
+        }
+        
+        .zone-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .zone-info {
+            font-size: 0.9em;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ddd;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .status-indicator.on {
+            background: #38ef7d;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.off {
+            background: #f85032;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .monitor-status {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .monitor-status h3 {
+            margin: 0;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        #drawInstruction {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 5px solid #ffc107;
+            display: none;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            background: #f85032;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .mqtt-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        
+        .mqtt-status.connected {
+            background: #38ef7d;
+            color: #155724;
+        }
+        
+        .mqtt-status.disconnected {
+            background: #f85032;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔴 ESP32-CAM LED Monitor</h1>
+            <p>Computherm fűtésszabályozó LED állapotfigyelő rendszer</p>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('setup')">⚙️ Beállítás</div>
+            <div class="tab" onclick="showTab('zones')">📍 Zónák</div>
+            <div class="tab" onclick="showTab('monitor')">📊 Monitoring</div>
+        </div>
+        
+        <!-- BEÁLLÍTÁS TAB -->
+        <div id="setup" class="tab-content active">
+            <div class="section">
+                <h2>Alapbeállítások</h2>
+                
+                <div class="form-group">
+                    <label>ESP32-CAM IP cím:</label>
+                    <input type="text" id="esp32_url" placeholder="http://192.168.1.100" value="http://192.168.1.100">
+                </div>
+                
+                <div class="form-group">
+                    <label>MQTT Broker:</label>
+                    <input type="text" id="mqtt_broker" placeholder="localhost" value="localhost">
+                </div>
+                
+                <div class="form-group">
+                    <label>MQTT Port:</label>
+                    <input type="number" id="mqtt_port" value="1883">
+                </div>
+                
+                <div class="form-group">
+                    <label>MQTT Felhasználó (opcionális):</label>
+                    <input type="text" id="mqtt_user" placeholder="">
+                </div>
+                
+                <div class="form-group">
+                    <label>MQTT Jelszó (opcionális):</label>
+                    <input type="password" id="mqtt_password" placeholder="">
+                </div>
+                
+                <button onclick="saveConfig()">💾 Konfiguráció mentése</button>
+            </div>
+        </div>
+        
+        <!-- ZÓNÁK TAB -->
+        <div id="zones" class="tab-content">
+            <div class="section">
+                <h2>LED Zónák kijelölése</h2>
+                
+                <div class="alert alert-info">
+                    <strong>ℹ️ Útmutató:</strong> Kattints a "Kép betöltése" gombra, majd jelöld ki az egérrel a LED területeket. Minden zónát nevezz el!
+                </div>
+                
+                <button onclick="loadSnapshot()">📷 Kép betöltése</button>
+                <button onclick="clearZones()" class="danger">🗑️ Összes zóna törlése</button>
+                <button onclick="saveZones()" class="success">💾 Zónák mentése</button>
+                
+                <div id="drawInstruction">
+                    Húzz egy téglalapot a LED területre az egér lenyomásával és húzásával!
+                </div>
+                
+                <div class="canvas-container">
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+                
+                <div id="zonesList" class="zones-list"></div>
+            </div>
+        </div>
+        
+        <!-- MONITORING TAB -->
+        <div id="monitor" class="tab-content">
+            <div class="monitor-status">
+                <div>
+                    <h3>🎯 Monitoring állapot</h3>
+                    <p id="monitorStatus">Leállítva</p>
+                </div>
+                <div class="btn-group">
+                    <button onclick="startMonitoring()" class="success">▶️ Indítás</button>
+                    <button onclick="stopMonitoring()" class="danger">⏹️ Leállítás</button>
+                    <button onclick="refreshStates()">🔄 Frissítés</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Élő kép <span class="mqtt-status" id="mqttStatus">Ellenőrzés...</span></h2>
+                <img id="liveImage" src="/api/annotated_snapshot" style="max-width: 100%; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
+            </div>
+            
+            <div class="section">
+                <h2>LED Állapotok</h2>
+                <div id="statesDisplay" class="zones-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let canvas, ctx, img;
+        let zones = [];
+        let isDrawing = false;
+        let startX, startY;
+        let currentZone = null;
+        let monitoringInterval = null;
+        
+        // Inicializálás
+        window.onload = function() {
+            canvas = document.getElementById('imageCanvas');
+            ctx = canvas.getContext('2d');
+            loadConfig();
+            loadZones();
+            
+            // Canvas események
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', endDrawing);
+        };
+        
+        function showTab(tabName) {
+            // Tab aktiválás
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            // Ha monitoring tab, indítsuk az élő képet
+            if (tabName === 'monitor') {
+                refreshStates();
+                if (!monitoringInterval) {
+                    monitoringInterval = setInterval(() => {
+                        document.getElementById('liveImage').src = '/api/annotated_snapshot?' + new Date().getTime();
+                        refreshStates();
+                    }, 2000);
+                }
+            } else {
+                if (monitoringInterval) {
+                    clearInterval(monitoringInterval);
+                    monitoringInterval = null;
+                }
+            }
+        }
+        
+        // Konfiguráció
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                document.getElementById('esp32_url').value = config.esp32_cam_url;
+                document.getElementById('mqtt_broker').value = config.mqtt_broker;
+                document.getElementById('mqtt_port').value = config.mqtt_port;
+                
+                updateMonitorStatus(config.monitoring_active);
+            } catch (error) {
+                console.error('Konfiguráció betöltési hiba:', error);
+            }
+        }
+        
+        async function saveConfig() {
+            const config = {
+                esp32_cam_url: document.getElementById('esp32_url').value,
+                mqtt_broker: document.getElementById('mqtt_broker').value,
+                mqtt_port: parseInt(document.getElementById('mqtt_port').value),
+                mqtt_user: document.getElementById('mqtt_user').value,
+                mqtt_password: document.getElementById('mqtt_password').value
+            };
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    alert('✅ Konfiguráció mentve!');
+                }
+            } catch (error) {
+                alert('❌ Hiba a mentés során: ' + error);
+            }
+        }
+        
+        // Zónák
+        async function loadZones() {
+            try {
+                const response = await fetch('/api/zones');
+                zones = await response.json();
+                renderZones();
+            } catch (error) {
+                console.error('Zónák betöltési hiba:', error);
+            }
+        }
+        
+        async function saveZones() {
+            try {
+                const response = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(zones)
+                });
+                
+                if (response.ok) {
+                    alert('✅ Zónák mentve!');
+                }
+            } catch (error) {
+                alert('❌ Hiba a mentés során: ' + error);
+            }
+        }
+        
+        function clearZones() {
+            if (confirm('Biztosan törölni szeretnéd az összes zónát?')) {
+                zones = [];
+                renderZones();
+                redrawCanvas();
+            }
+        }
+        
+        async function loadSnapshot() {
+            try {
+                const response = await fetch('/api/snapshot');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                img = new Image();
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    redrawCanvas();
+                    document.getElementById('drawInstruction').style.display = 'block';
+                };
+                img.src = url;
+            } catch (error) {
+                alert('❌ Kép betöltési hiba: ' + error);
+            }
+        }
+        
+        function startDrawing(e) {
+            if (!img) return;
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+        }
+        
+        function draw(e) {
+            if (!isDrawing || !img) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            redrawCanvas();
+            
+            // Jelenlegi rajzolás
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+        }
+        
+        function endDrawing(e) {
+            if (!isDrawing || !img) return;
+            isDrawing = false;
+            
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+            
+            const width = Math.abs(endX - startX);
+            const height = Math.abs(endY - startY);
+            
+            if (width > 10 && height > 10) {
+                const zoneName = prompt('Add meg a zóna nevét (pl: Nappali, Háló):');
+                if (zoneName) {
+                    // Küszöbérték bekérése
+                    let threshold = prompt('Fényerő küszöb (10-100, alapértelmezett: 30):', '30');
+                    threshold = parseInt(threshold) || 30;
+                    threshold = Math.max(10, Math.min(100, threshold)); // 10-100 között
+                    
+                    // LED típus bekérése
+                    const ledTypes = {
+                        '1': 'auto',
+                        '2': 'red',
+                        '3': 'white',
+                        '4': 'green',
+                        '5': 'blue',
+                        '6': 'orange',
+                        '7': 'any'
+                    };
+                    const ledChoice = prompt(
+                        'LED típus:\\n' +
+                        '1 - Automatikus (vörös/fehér/narancs)\\n' +
+                        '2 - Csak vörös\\n' +
+                        '3 - Csak fehér\\n' +
+                        '4 - Csak zöld\\n' +
+                        '5 - Csak kék\\n' +
+                        '6 - Narancs/sárga\\n' +
+                        '7 - Bármelyik szín\\n' +
+                        'Válassz (1-7, alapértelmezett: 1):', '1'
+                    );
+                    const ledType = ledTypes[ledChoice] || 'auto';
+                    
+                    const zone = {
+                        id: 'zone_' + Date.now(),
+                        name: zoneName,
+                        x: Math.min(startX, endX),
+                        y: Math.min(startY, endY),
+                        width: width,
+                        height: height,
+                        threshold: threshold,
+                        led_type: ledType
+                    };
+                    zones.push(zone);
+                    renderZones();
+                    redrawCanvas();
+                }
+            }
+        }
+        
+        function redrawCanvas() {
+            if (!img) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            
+            // Zónák rajzolása
+            zones.forEach((zone, index) => {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+                
+                ctx.fillStyle = '#ff0000';
+                ctx.font = '16px Arial';
+                ctx.fillText(`${index + 1}. ${zone.name}`, zone.x, zone.y - 5);
+            });
+        }
+        
+        function renderZones() {
+            const list = document.getElementById('zonesList');
+            list.innerHTML = '';
+            
+            zones.forEach((zone, index) => {
+                const ledTypeNames = {
+                    'auto': '🔴 Auto (vörös/fehér)',
+                    'red': '🔴 Vörös',
+                    'white': '⚪ Fehér',
+                    'green': '🟢 Zöld',
+                    'blue': '🔵 Kék',
+                    'orange': '🟠 Narancs',
+                    'any': '🌈 Bármely'
+                };
+                
+                const card = document.createElement('div');
+                card.className = 'zone-card';
+                card.innerHTML = `
+                    <h3>${index + 1}. ${zone.name}</h3>
+                    <div class="zone-info">📐 Méret: ${zone.width} × ${zone.height}px</div>
+                    <div class="zone-info">📍 Pozíció: (${zone.x}, ${zone.y})</div>
+                    <div class="zone-info">💡 LED típus: ${ledTypeNames[zone.led_type] || ledTypeNames['auto']}</div>
+                    <div class="zone-info">
+                        🎚️ Küszöb: 
+                        <input type="number" value="${zone.threshold}" min="10" max="100"
+                            onchange="zones[${index}].threshold = parseInt(this.value)" 
+                            style="width: 60px;">
+                    </div>
+                    <div class="zone-info">💡 Fényerő: <strong>${zone.last_brightness ? zone.last_brightness.toFixed(1) : 'N/A'}</strong></div>
+                    <div class="zone-info">⚡ Állapot: <strong>${zone.last_state ? '🟢 BE' : '🔴 KI'}</strong></div>
+                    <button class="delete-btn" onclick="deleteZone(${index})">🗑️ Törlés</button>
+                `;
+                list.appendChild(card);
+            });
+        }
+        
+        function deleteZone(index) {
+            if (confirm('Biztosan törölni szeretnéd ezt a zónát?')) {
+                zones.splice(index, 1);
+                renderZones();
+                redrawCanvas();
+            }
+        }
+        
+        // Monitoring
+        async function startMonitoring() {
+            try {
+                const response = await fetch('/api/monitoring/start', {method: 'POST'});
+                const data = await response.json();
+                if (data.success) {
+                    updateMonitorStatus(true);
+                    alert('✅ ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Hiba: ' + error);
+            }
+        }
+        
+        async function stopMonitoring() {
+            try {
+                const response = await fetch('/api/monitoring/stop', {method: 'POST'});
+                const data = await response.json();
+                if (data.success) {
+                    updateMonitorStatus(false);
+                    alert('✅ ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Hiba: ' + error);
+            }
+        }
+        
+        function updateMonitorStatus(isActive) {
+            const status = document.getElementById('monitorStatus');
+            if (isActive) {
+                status.innerHTML = '<span style="color: #38ef7d;">● Fut</span>';
+            } else {
+                status.innerHTML = '<span style="color: #f85032;">● Leállítva</span>';
+            }
+        }
+        
+        async function refreshStates() {
+            try {
+                // Állapotok lekérése
+                const statesResponse = await fetch('/api/states');
+                const states = await statesResponse.json();
+                
+                // Zónák lekérése (frissített adatokkal)
+                const zonesResponse = await fetch('/api/zones');
+                zones = await zonesResponse.json();
+                
+                const display = document.getElementById('statesDisplay');
+                display.innerHTML = '';
+                
+                zones.forEach(zone => {
+                    const state = states[zone.id];
+                    const card = document.createElement('div');
+                    card.className = 'zone-card' + (state ? ' active' : '');
+                    
+                    // LED típus nevei
+                    const ledTypeNames = {
+                        'auto': '🔴 Auto',
+                        'red': '🔴 Vörös',
+                        'white': '⚪ Fehér',
+                        'green': '🟢 Zöld',
+                        'blue': '🔵 Kék',
+                        'orange': '🟠 Narancs',
+                        'any': '🌈 Bármely'
+                    };
+                    
+                    card.innerHTML = `
+                        <div class="status-indicator ${state ? 'on' : 'off'}"></div>
+                        <h3>${zone.name}</h3>
+                        <div class="zone-info">💡 LED: ${ledTypeNames[zone.led_type] || ledTypeNames['auto']}</div>
+                        <div class="zone-info">🎚️ Küszöb: ${zone.threshold}</div>
+                        <div class="zone-info">Állapot: <strong style="font-size: 1.2em;">${state ? '🟢 BEKAPCSOLVA' : '⚫ KIKAPCSOLVA'}</strong></div>
+                        <div class="zone-info">Fényerő: <strong>${zone.last_brightness !== undefined ? zone.last_brightness.toFixed(1) : 'N/A'}</strong></div>
+                        <div class="zone-info">Utolsó: ${zone.last_check ? new Date(zone.last_check).toLocaleTimeString('hu-HU') : 'N/A'}</div>
+                    `;
+                    display.appendChild(card);
+                });
+                
+                // MQTT státusz
+                updateMQTTStatus();
+            } catch (error) {
+                console.error('Állapot frissítési hiba:', error);
+            }
+        }
+        
+        function updateMQTTStatus() {
+            // Ez egy placeholder - a valós MQTT státuszt a backenddel kellene kommunikálni
+            const status = document.getElementById('mqttStatus');
+            status.textContent = 'Csatlakozva';
+            status.className = 'mqtt-status connected';
+        }
+    </script>
+</body>
+</html>
