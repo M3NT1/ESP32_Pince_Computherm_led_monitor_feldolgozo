@@ -674,6 +674,7 @@ def get_annotated_snapshot():
     line_height = 30
     list_font_scale = 0.6
     list_font_thickness = 2
+    font = cv2.FONT_HERSHEY_SIMPLEX
     
     # Félátlátszó fekete háttér a teljes listához
     max_text_width = 0
