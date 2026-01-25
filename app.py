@@ -87,7 +87,17 @@ def on_mqtt_disconnect(client, userdata, rc):
 
 def init_mqtt():
     global mqtt_client
-    mqtt_client = mqtt.Client(client_id="esp32cam_led_monitor", callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+    # Kompatibilitás paho-mqtt 1.x és 2.x verziókkal
+    try:
+        # paho-mqtt 2.x
+        mqtt_client = mqtt.Client(
+            client_id="esp32cam_led_monitor",
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2
+        )
+    except (AttributeError, TypeError):
+        # paho-mqtt 1.x (régebbi verzió)
+        mqtt_client = mqtt.Client(client_id="esp32cam_led_monitor")
+    
     mqtt_client.on_connect = on_mqtt_connect
     mqtt_client.on_disconnect = on_mqtt_disconnect
     

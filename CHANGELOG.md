@@ -10,6 +10,8 @@ Az összes fontos változás ebben a projektben dokumentálva lesz ebben a fájl
 - Docker image pull hiba javítása ("denied" error)
 - **run.sh zones konfiguráció JSON parsing hiba javítása**
 - Üres zones érték biztonságos kezelése (default: üres tömb)
+- **paho-mqtt kompatibilitás javítása 1.x és 2.x verziókhoz**
+- MQTT Client inicializálás backward compatibility
 
 ## [1.0.0] - 2026-01-25
 
