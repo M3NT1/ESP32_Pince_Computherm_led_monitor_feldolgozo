@@ -43,3 +43,4 @@ schema:
       height: int
       threshold: int(1,255)?
       led_type: list(auto|red|green|blue|white|orange|any)?
+image: "ghcr.io/m3nt1/esp32cam-led-monitor-{arch}"

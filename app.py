@@ -31,7 +31,7 @@ led_states = {}
 monitoring_active = False
 last_image = None
 last_image_time = 0
-image_cache_duration = 0.5  # Cache 0.5 másodpercig
+image_cache_duration = 30  # Cache 30 másodpercig (félpercenként frissül)
 mqtt_client = None
 camera_lock = threading.Lock()
 
@@ -149,19 +149,23 @@ def publish_led_state(zone_id, state):
         mqtt_client.publish(topic, payload, retain=True)
 
 # ===== Képfeldolgozás =====
-def capture_frame():
-    """Kép letöltése az ESP32-CAM-ről (cache-elt)"""
+def capture_frame(force_refresh=False):
+    """Kép letöltése az ESP32-CAM-ről (cache-elt)
+    
+    Args:
+        force_refresh: Ha True, akkor új képet kér a cache ellenére
+    """
     global last_image, last_image_time
     
-    # Ha van friss cache-elt kép, használjuk azt
+    # Ha van friss cache-elt kép ÉS nem kényszerítünk frissítést, használjuk azt
     current_time = time.time()
-    if last_image is not None and (current_time - last_image_time) < image_cache_duration:
+    if not force_refresh and last_image is not None and (current_time - last_image_time) < image_cache_duration:
         return last_image.copy()
     
     # Lock használata hogy ne legyen több egyidejű kérés
     with camera_lock:
         # Újra ellenőrizzük a cache-t (más szál lehet hogy közben frissítette)
-        if last_image is not None and (time.time() - last_image_time) < image_cache_duration:
+        if not force_refresh and last_image is not None and (time.time() - last_image_time) < image_cache_duration:
             return last_image.copy()
         
         try:
@@ -316,10 +320,10 @@ def monitoring_thread():
     while monitoring_active:
         try:
             process_frame()
-            time.sleep(2)  # 2 másodpercenként ellenőrzés
+            time.sleep(30)  # 30 másodpercenként (félpercenként) ellenőrzés
         except Exception as e:
             print(f"[MONITOR] Hiba: {e}")
-            time.sleep(5)
+            time.sleep(30)  # Hiba esetén is 30 mp várakozás
     print("[MONITOR] Leállítva")
 
 # ===== API Endpoints =====
@@ -379,16 +383,18 @@ def save_zones():
 
 @app.route('/api/snapshot')
 def get_snapshot():
-    """Aktuális kép letöltése"""
+    """Aktuális kép letöltése
+    
+    Query paraméter:
+        refresh=true - Friss kép kérése a cache ellenére (zóna kalibráláshoz)
+    """
     global last_image, last_image_time
     
-    # Ha van friss cache-elt kép, használjuk
-    if last_image is not None and (time.time() - last_image_time) < 2.0:
-        _, buffer = cv2.imencode('.jpg', last_image)
-        return Response(buffer.tobytes(), mimetype='image/jpeg')
+    # Ellenőrizzük a refresh paramétert
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
     
-    # Különben új képet kérünk
-    img = capture_frame()
+    # Új képet kérünk (force_refresh határozza meg hogy cache-ből vagy frissen)
+    img = capture_frame(force_refresh=force_refresh)
     if img is None:
         # Ha nincs kép, adjunk vissza hibaüzenetet szöveges formában
         return jsonify({'error': 'ESP32-CAM nem elérhető. Ellenőrizd az IP címet és hogy be van-e kapcsolva a kamera.'}), 503
@@ -399,14 +405,18 @@ def get_snapshot():
 
 @app.route('/api/annotated_snapshot')
 def get_annotated_snapshot():
-    """Kép a zónákkal kirajzolva ÉS valós idejű detektálással"""
+    """Kép a zónákkal kirajzolva ÉS valós idejű detektálással
+    
+    Query paraméter:
+        refresh=true - Friss kép kérése a cache ellenére (zóna kalibráláshoz)
+    """
     global last_image, last_image_time, led_states, led_zones
     
-    # Ha van friss cache-elt kép és vannak zónák
-    if last_image is not None and (time.time() - last_image_time) < 2.0 and len(led_zones) > 0:
-        img = last_image.copy()
-    else:
-        img = capture_frame()
+    # Ellenőrizzük a refresh paramétert
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    
+    # Képet kérünk (force_refresh határozza meg hogy cache-ből vagy frissen)
+    img = capture_frame(force_refresh=force_refresh)
     
     if img is None:
         return jsonify({'error': 'ESP32-CAM nem elérhető'}), 503
