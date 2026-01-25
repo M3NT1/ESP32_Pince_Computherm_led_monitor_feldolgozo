@@ -1,0 +1,12 @@
+build_from:
+  aarch64: "ghcr.io/home-assistant/aarch64-base:3.19"
+  amd64: "ghcr.io/home-assistant/amd64-base:3.19"
+  armhf: "ghcr.io/home-assistant/armhf-base:3.19"
+  armv7: "ghcr.io/home-assistant/armv7-base:3.19"
+labels:
+  org.opencontainers.image.title: "ESP32-CAM LED Monitor"
+  org.opencontainers.image.description: "ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz"
+  org.opencontainers.image.source: "https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"
+  org.opencontainers.image.licenses: "MIT"
+args:
+  PYTHON_VERSION: "3.11"

@@ -38,6 +38,15 @@ camera_lock = threading.Lock()
 # ===== Konfiguráció betöltése =====
 def load_config():
     global led_zones, ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD
+    
+    # Home Assistant Add-on options ellenőrzése
+    addon_options = '/data/options.json'
+    if os.path.exists(addon_options):
+        print("[CONFIG] Home Assistant Add-on mód detektálva")
+        # Az Add-on már generálta a config.json-t a run.sh-ban
+        # Itt csak ellenőrizzük
+    
+    # Normál config.json betöltése
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             config = json.load(f)
@@ -48,6 +57,8 @@ def load_config():
             MQTT_USER = config.get('mqtt_user', '')
             MQTT_PASSWORD = config.get('mqtt_password', '')
             print(f"[CONFIG] Betöltve {len(led_zones)} zóna")
+    else:
+        print(f"[CONFIG] {CONFIG_FILE} nem található, alapértelmezett értékek használata")
 
 def save_config():
     config = {

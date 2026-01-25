@@ -1,20 +1,21 @@
-# 🔴 ESP32-CAM LED Monitor - Home Assistant Integráció
+# ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![ESP32-CAM](https://img.shields.io/badge/ESP32--CAM-AI--Thinker-blue)
-![Python](https://img.shields.io/badge/Python-3.8+-green)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-MQTT-orange)
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
+![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
+![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
+![Supports armv7 Architecture](https://img.shields.io/badge/armv7-yes-green.svg)
 
-Computherm fűtésszabályozó LED állapotfigyelő rendszer Home Assistant integrációval.
+ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
 ## 📋 Funkciók
 
-- ✅ **Webes konfiguráló felület** - LED területek egyszerű kijelölése egérrel
-- ✅ **4 fűtési zóna monitorozása** - Testreszabható elnevezésekkel
-- ✅ **Valós idejű LED detektálás** - OpenCV-alapú képfeldolgozás
-- ✅ **MQTT integráció** - Automatikus Home Assistant device discovery
-- ✅ **Állapot előzmények** - Nyomon követhető mikor volt be/kikapcsolva minden zóna
-- ✅ **Élő monitoring** - Vizuális visszajelzés a webes felületen
-- ✅ **Automatikus újracsatlakozás** - WiFi és MQTT kapcsolat kezelése
+- 🎥 Valós idejű ESP32-CAM képfeldolgozás
+- 🔴 Többszínű LED detektálás (vörös, zöld, kék, fehér, narancs)
+- 📊 Webes felület a zónák konfigurálásához
+- 🏠 Automatikus Home Assistant integráció MQTT-n keresztül
+- 🔄 Valós idejű állapot frissítés
+- 📦 Egyszerű telepítés HACS-en keresztül
 
 ## 🏗️ Architektúra
 
@@ -34,104 +35,169 @@ Computherm fűtésszabályozó LED állapotfigyelő rendszer Home Assistant inte
 
 ## 🚀 Telepítés
 
-### 🍓 Raspberry Pi 4 (ajánlott - Home Assistant környezethez)
+### 1. HACS telepítés (ajánlott)
 
-Ha Raspberry Pi 4-en fut a Home Assistant:
+1. Nyisd meg a HACS-t a Home Assistantben
+2. Kattints a jobb felső sarokban a három pontra (⋮)
+3. Válaszd a **"Custom repositories"** menüpontot
+4. Add hozzá a következő repository-t:
+   - **URL**: `https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo`
+   - **Category**: `Add-on`
+5. Kattints az **"Add"** gombra
+6. Keresd meg az **"ESP32-CAM LED Monitor"** add-ont
+7. Kattints a **"Download"** gombra
+8. Menj a **Settings → Add-ons** menübe
+9. Keress rá az **"ESP32-CAM LED Monitor"** add-onra
+10. Kattints rá és állítsd be a konfigurációt (lásd alább)
+11. Indítsd el az add-ont
 
-**Lásd a részletes útmutatót:** [RASPBERRY_PI_INSTALL.md](RASPBERRY_PI_INSTALL.md)
-
-**Gyors telepítés:**
-```bash
-# Fájlok másolása Raspberry Pi-re
-scp -r Home_assistant_kiegeszito_feldolgozo pi@[RASPBERRY_PI_IP]:/home/pi/
-
-# SSH csatlakozás
-ssh pi@[RASPBERRY_PI_IP]
-
-# Telepítő futtatása
-cd /home/pi/Home_assistant_kiegeszito_feldolgozo
-chmod +x install_rpi.sh
-sudo ./install_rpi.sh
-```
-
-A telepítő automatikusan:
-- ✅ Telepíti az összes függőséget
-- ✅ Létrehoz egy systemd service-t
-- ✅ Beállítja az automatikus indítást
-- ✅ Optimalizálja Raspberry Pi-re
-
----
-
-### 💻 Kézi telepítés (Mac/Linux/Windows)
-
-### 1. Előfeltételek
+### 2. Manuális telepítés
 
 ```bash
-# Python 3.8 vagy újabb
-python3 --version
-
-# pip frissítése
-pip3 install --upgrade pip
+cd /addons
+git clone https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo.git esp32cam_led_monitor
 ```
 
-### 2. Python függőségek telepítése
+Majd a Home Assistant Supervisor-ban:
+- **Settings → Add-ons → Add-on Store** (jobb alsó sarok)
+- **Refresh**
+- Keresd meg az **"ESP32-CAM LED Monitor"** add-ont
 
-```bash
-cd Home_assistant_kiegeszito_feldolgozo
-pip3 install -r requirements.txt
-```
+## ⚙️ Konfiguráció
 
-### 3. Home Assistant MQTT Broker beállítása
+### Alapbeállítások
 
-#### Mosquitto Broker telepítése (Raspberry Pi-n)
-
-**Home Assistant Supervisor módban:**
-1. Settings → Add-ons → Add-on Store
-2. Keress rá: "Mosquitto broker"
-3. Telepítés → Start → Auto-start bekapcsolása
-
-**Kézi telepítés (Linux/Raspberry Pi):**
-```bash
-sudo apt-get update
-sudo apt-get install mosquitto mosquitto-clients
-sudo systemctl enable mosquitto
-sudo systemctl start mosquitto
-```
-
-#### Home Assistant configuration.yaml
+Az add-on konfigurációs felületén (Settings → Add-ons → ESP32-CAM LED Monitor → Configuration):
 
 ```yaml
-mqtt:
-  broker: localhost
-  port: 1883
-  discovery: true
-  discovery_prefix: homeassistant
+esp32_cam_url: "http://192.168.10.130"
+mqtt_broker: "core-mosquitto"
+mqtt_port: 1883
+mqtt_user: ""
+mqtt_password: ""
+zones: []
 ```
 
-Újraindítás után:
-```bash
-ha core restart
+### LED zónák beállítása
+
+1. Indítsd el az add-ont
+2. Nyisd meg a webes felületet: `http://[home-assistant-ip]:5001`
+3. Kattints a **"Zónák szerkesztése"** gombra
+4. Állítsd be a LED zónákat az egérrel húzva
+5. Mentsd el a konfigurációt
+
+### MQTT konfiguráció
+
+**Ha a beépített Mosquitto brokert használod:**
+- MQTT broker: `core-mosquitto`
+- MQTT user/password: üres (ha nincs beállítva)
+
+**Ha külső MQTT brokert használsz:**
+- Állítsd be az IP címet vagy hostname-t
+- Add meg a felhasználónevet és jelszót
+
+## 🏠 Home Assistant integráció
+
+Az add-on automatikusan létrehozza a binary sensor entitásokat:
+
+```yaml
+binary_sensor.futes_pince
+binary_sensor.futes_nappali
+binary_sensor.futes_haloszoba
+# stb...
 ```
 
-### 4. ESP32-CAM feltöltése
+### Lovelace card példa
 
-1. Nyisd meg az Arduino IDE-t
-2. Töltsd fel az ESP32-CAM kódot (lásd: `esp32cam_streaming.ino`)
-3. Jegyezd meg az ESP32-CAM IP címét a Serial Monitor-ból
-
-## ⚙️ Beállítás és Használat
-
-### 1. Alkalmazás indítása
-
-```bash
-python3 app.py
+```yaml
+type: entities
+title: Fűtés állapot
+entities:
+  - entity: binary_sensor.futes_pince
+  - entity: binary_sensor.futes_nappali
+  - entity: binary_sensor.futes_haloszoba
 ```
 
-A webes felület elérhető: **http://localhost:5000**
+### Automatizáció példa
 
-### 2. Alapbeállítások
+```yaml
+automation:
+  - alias: "Értesítés fűtés bekapcsoláskor"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.futes_pince
+        to: "on"
+    action:
+      - service: notify.mobile_app
+        data:
+          message: "A pince fűtés bekapcsolt"
+```
 
-A **⚙️ Beállítás** fülön:
+## 📱 ESP32-CAM konfiguráció
+
+Az ESP32-CAM-et úgy kell beállítani, hogy HTTP stream-et szolgáltasson a `/` endpointon.
+
+Példa Arduino kód: (ha szükséges, kérd el külön)
+
+## 🔧 Hibaelhárítás
+
+### Az add-on nem indul el
+
+1. Ellenőrizd a logokat: **Settings → Add-ons → ESP32-CAM LED Monitor → Log**
+2. Ellenőrizd az MQTT kapcsolatot
+3. Ellenőrizd az ESP32-CAM elérhetőségét
+
+### Az ESP32-CAM nem elérhető
+
+1. Pingeld az IP címet: `ping 192.168.10.130`
+2. Nyisd meg böngészőben: `http://192.168.10.130`
+3. Ellenőrizd a tápellátást
+4. Ellenőrizd a WiFi kapcsolatot
+
+### MQTT entitások nem jelennek meg
+
+1. Ellenőrizd, hogy a Mosquitto broker fut-e
+2. Restart Home Assistant
+3. Ellenőrizd az MQTT integráció beállításait: **Settings → Devices & Services → MQTT**
+
+### LED detektálás nem működik megfelelően
+
+1. Nyisd meg a webes felületet: `http://[home-assistant-ip]:5001`
+2. Nézd meg az előnézeti képet (zónák kirajzolva)
+3. Állítsd be a zónák méretét és pozícióját
+4. Próbáld ki a különböző LED típusokat (auto, red, green, blue, white, orange)
+5. Módosítsd a küszöbértéket (threshold) 10-100 között
+
+## 💾 Rendszerkövetelmények
+
+- Home Assistant OS / Supervised
+- MQTT broker (pl. Mosquitto)
+- ESP32-CAM HTTP stream képességgel
+- Min. 512 MB RAM (Raspberry Pi 3+, 4 ajánlott)
+
+## 🖥️ Támogatott architektúrák
+
+- ✅ aarch64 (Raspberry Pi 3/4 64-bit)
+- ✅ amd64 (x86-64)
+- ✅ armhf (Raspberry Pi 32-bit)
+- ✅ armv7 (Raspberry Pi 2/3 32-bit)
+
+## 📞 Támogatás
+
+- 🐛 **GitHub Issues**: https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo/issues
+- 📖 **Dokumentáció**: [DOCS.md](DOCS.md)
+- 🔧 **Home Assistant**: https://www.home-assistant.io
+
+## 📄 Licenc
+
+MIT License
+
+## 🙏 Köszönetnyilvánítás
+
+- Home Assistant közösség
+- OpenCV projekt
+- Flask framework
+- Paho MQTT
 
 - **ESP32-CAM IP cím**: Az ESP32-CAM IP címe (pl: `http://192.168.1.100`)
 - **MQTT Broker**: A Home Assistant IP címe vagy `localhost` (ha ugyanazon a gépen fut)
@@ -182,117 +248,21 @@ entities:
   - entity: binary_sensor.futes_halo
     name: Hálószoba
   - entity: binary_sensor.futes_gyerekszoba
-    name: Gyerekszoba
-  - entity: binary_sensor.futes_furdoszoba
-    name: Fürdőszoba
-state_color: true
-```
 
-### History Graph - 24 órás előzmények
+---
 
-```yaml
-type: history-graph
-title: Fűtés előzmények
-hours_to_show: 24
-entities:
-  - entity: binary_sensor.futes_nappali
-  - entity: binary_sensor.futes_halo
-  - entity: binary_sensor.futes_gyerekszoba
-  - entity: binary_sensor.futes_furdoszoba
-```
+## 📚 További dokumentáció
 
-### Statisztika (hány órát volt be a fűtés)
+- 📖 [DOCS.md](DOCS.md) - Add-on részletes dokumentáció
+- 🏠 [HOME_ASSISTANT_CONFIG.md](HOME_ASSISTANT_CONFIG.md) - Home Assistant példák
+- 🚀 [RASPBERRY_PI_INSTALL.md](RASPBERRY_PI_INSTALL.md) - Manuális telepítés (ha nem add-ont használsz)
+- 📝 [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Gyors áttekintés
 
-```yaml
-sensor:
-  - platform: history_stats
-    name: Nappali fűtési idő ma
-    entity_id: binary_sensor.futes_nappali
-    state: "on"
-    type: time
-    start: "{{ now().replace(hour=0, minute=0, second=0) }}"
-    end: "{{ now() }}"
-```
+---
 
-Részletesebb Home Assistant konfigurációért lásd: [HOME_ASSISTANT_CONFIG.md](HOME_ASSISTANT_CONFIG.md)
-
-## 🔧 Finomhangolás
-
-### LED Detektálási küszöb módosítása
-
-A webes felületen minden zónához állítható a küszöbérték (threshold):
-- **Alacsony érték (10-20)**: Érzékenyebb, sötétebb LED-eket is érzékel
-- **Magas érték (40-50)**: Csak erősen világító LED-eket érzékel
-
-### Monitoring gyakoriság
-
-Az `app.py` fájlban módosítható:
-
-```python
-def monitoring_thread():
-    while monitoring_active:
-        process_frame()
-        time.sleep(2)  # 2 másodperc → módosítható
-```
-
-### ESP32-CAM képminőség
-
-Az ESP32-CAM kódjában:
-
-```cpp
-config.frame_size   = FRAMESIZE_VGA;  // VGA (640×480)
-config.jpeg_quality = 30;             // 10 (legjobb) - 63 (legrosszabb)
-```
-
-## 🐛 Hibaelhárítás
-
-### "Nem sikerült képet letölteni"
-
-- Ellenőrizd, hogy az ESP32-CAM be van-e kapcsolva
-- Ellenőrizd az IP címet a webes felületen
-- Próbáld meg böngészőből elérni: `http://[ESP32_IP]/`
-
-### "MQTT kapcsolódási hiba"
-
-```bash
-# Mosquitto állapot ellenőrzése
-sudo systemctl status mosquitto
-
-# Mosquitto újraindítása
-sudo systemctl restart mosquitto
-
-# MQTT kapcsolat tesztelése
-mosquitto_sub -h localhost -t "homeassistant/#" -v
-```
-
-### Home Assistant-ban nem jelennek meg az entitások
-
-1. Ellenőrizd a MQTT integrációt: Settings → Devices & Services → MQTT
-2. MQTT reload: Developer Tools → Services → `mqtt.reload`
-3. Ellenőrizd a log-okat: Settings → System → Logs
-
-### LED-ek nem detektálódnak helyesen
-
-- Próbáld meg módosítani a küszöbértéket a webes felületen
-- Ellenőrizd, hogy a kijelölt terület valóban a LED-et fedi-e
-- Nappali fényben lehet, hogy zajosabb a detektálás - sötétebb környezet ajánlott
-
-## 📁 Fájlstruktúra
-
-```
-Home_assistant_kiegeszito_feldolgozo/
-├── app.py                      # Fő Python alkalmazás
-├── requirements.txt            # Python függőségek
-├── config.json                 # Konfiguráció (automatikusan generált)
-├── templates/
-│   └── index.html             # Webes felület
-├── HOME_ASSISTANT_CONFIG.md    # Home Assistant részletes konfiguráció
-└── README.md                   # Ez a fájl
-```
-
-## 🔐 Biztonság
-
-### MQTT Authentication (ajánlott)
+**Készítette:** M3NT1  
+**Repository:** https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo  
+**Licenc:** MIT
 
 ```yaml
 # Home Assistant configuration.yaml

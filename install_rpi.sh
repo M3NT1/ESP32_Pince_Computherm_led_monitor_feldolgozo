@@ -1,8 +1,87 @@
 #!/bin/bash
 #
-# ESP32-CAM LED Monitor - Raspberry Pi 4 Telepítő Script
-# Home Assistant környezethez optimalizálva
+# ⚠️  FIGYELEM: EZ A TELEPÍTŐ SCRIPT ELAVULT!
 #
+# Az ESP32-CAM LED Monitor mostantól Home Assistant Add-on formátumban érhető el.
+# 
+# 🎉 AJÁNLOTT TELEPÍTÉSI MÓDSZER: HACS
+#
+# Kérjük, használd a HACS-t (Home Assistant Community Store) a telepítéshez:
+#
+# 1. Nyisd meg a HACS-t Home Assistantben
+# 2. Menj a Custom repositories menübe (⋮ → Custom repositories)
+# 3. Add hozzá ezt a repository-t:
+#    URL: https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo
+#    Category: Add-on
+# 4. Telepítsd az add-ont a HACS-ből
+# 5. Konfiguráld és indítsd el
+#
+# 📖 Részletes útmutató:
+# - README.md
+# - HACS_INSTALL.md
+# - QUICKSTART.md
+#
+# 🆘 Segítségre van szükséged?
+# GitHub Issues: https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo/issues
+#
+# ============================================================================
+
+echo "=============================================="
+echo "⚠️  FIGYELEM: ELAVULT TELEPÍTŐ"
+echo "=============================================="
+echo ""
+echo "Ez a telepítő script ELAVULT és NEM AJÁNLOTT többé."
+echo ""
+echo "Az ESP32-CAM LED Monitor mostantól Home Assistant"
+echo "Add-on formátumban érhető el HACS-en keresztül."
+echo ""
+echo "=============================================="
+echo "✅ AJÁNLOTT TELEPÍTÉSI MÓDSZER"
+echo "=============================================="
+echo ""
+echo "1. Telepítsd a HACS-t (ha még nincs):"
+echo "   https://hacs.xyz/docs/setup/download"
+echo ""
+echo "2. Add hozzá a Custom Repository-t:"
+echo "   HACS → ⋮ → Custom repositories"
+echo "   URL: https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"
+echo "   Category: Add-on"
+echo ""
+echo "3. Telepítsd az Add-ont:"
+echo "   Settings → Add-ons → Add-on Store"
+echo "   Keresés: 'ESP32-CAM LED Monitor'"
+echo ""
+echo "4. Konfiguráld és indítsd el"
+echo ""
+echo "=============================================="
+echo "📖 Részletes dokumentáció:"
+echo "=============================================="
+echo ""
+echo "  • README.md         - Általános leírás"
+echo "  • HACS_INSTALL.md   - HACS telepítési útmutató"
+echo "  • QUICKSTART.md     - 5 perces gyors útmutató"
+echo "  • DOCS.md           - Részletes konfiguráció"
+echo ""
+echo "=============================================="
+echo ""
+read -p "Biztos folytatni szeretnéd az elavult telepítést? (y/N): " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo ""
+    echo "Telepítés megszakítva. Használd a HACS-t!"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "⚠️  OK, folytatjuk az elavult telepítést..."
+echo "⚠️  Kérjük, fontold meg a HACS használatát a jövőben!"
+echo ""
+sleep 3
+
+# Az eredeti telepítő script folytatódik innen...
+# (A régi kód megtartva kompatibilitás miatt)
 
 set -e
 
