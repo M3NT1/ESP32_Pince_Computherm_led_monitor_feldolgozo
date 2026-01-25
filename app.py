@@ -31,7 +31,10 @@ led_states = {}
 monitoring_active = False
 last_image = None
 last_image_time = 0
-image_cache_duration = 30  # Cache 30 másodpercig (félpercenként frissül)
+image_cache_duration = 120  # Cache 2 percig
+camera_timeout = 120  # 2 perces timeout kép letöltéshez
+camera_error_count = 0  # Egymás utáni hibák száma
+last_error_time = 0  # Utolsó hiba időpontja
 mqtt_client = None
 camera_lock = threading.Lock()
 
@@ -150,17 +153,34 @@ def publish_led_state(zone_id, state):
 
 # ===== Képfeldolgozás =====
 def capture_frame(force_refresh=False):
-    """Kép letöltése az ESP32-CAM-ről (cache-elt)
+    """Kép letöltése az ESP32-CAM-ről (cache-elt) intelligens hibakezeléssel
     
     Args:
         force_refresh: Ha True, akkor új képet kér a cache ellenére
+    
+    Returns:
+        numpy.ndarray vagy None: A kép vagy None hiba esetén
     """
-    global last_image, last_image_time
+    global last_image, last_image_time, camera_error_count, last_error_time
     
     # Ha van friss cache-elt kép ÉS nem kényszerítünk frissítést, használjuk azt
     current_time = time.time()
     if not force_refresh and last_image is not None and (current_time - last_image_time) < image_cache_duration:
         return last_image.copy()
+    
+    # Exponential backoff: ha túl sok hiba volt, várjunk mielőtt újra próbálkozunk
+    if camera_error_count > 0 and last_error_time > 0:
+        # Backoff idő: 2^error_count * 30 sec (max 120 sec)
+        backoff_time = min(120, (2 ** min(camera_error_count, 4)) * 30)
+        time_since_error = current_time - last_error_time
+        
+        if time_since_error < backoff_time:
+            remaining = backoff_time - time_since_error
+            print(f"[CAM] Backoff: várakozás {remaining:.0f} másodperc ({camera_error_count} egymás utáni hiba)")
+            # Ha van cache-elt kép, adjuk vissza azt még ha régi is
+            if last_image is not None:
+                return last_image.copy()
+            return None
     
     # Lock használata hogy ne legyen több egyidejű kérés
     with camera_lock:
@@ -168,21 +188,31 @@ def capture_frame(force_refresh=False):
         if not force_refresh and last_image is not None and (time.time() - last_image_time) < image_cache_duration:
             return last_image.copy()
         
+        print(f"[CAM] Kép letöltése ESP32-CAM-ről (timeout: {camera_timeout}s)...")
+        start_time = time.time()
+        
         try:
-            # Próbáljuk meg rövid timeout-tal, kevesebb újrapróbálkozással
+            # 2 perces timeout - ESP32-CAM lehet lassú
             response = requests.get(
                 f"{ESP32_CAM_URL}/", 
                 stream=True, 
-                timeout=3,
+                timeout=camera_timeout,
                 headers={'Connection': 'close'}  # Ne tartsa nyitva a kapcsolatot
             )
             
             if response.status_code == 200:
                 # Multipart stream első frame kinyerése
                 bytes_data = bytes()
-                max_bytes = 1024 * 100  # Max 100KB olvasás
+                max_bytes = 1024 * 150  # Max 150KB olvasás (nagyobb felbontáshoz)
+                chunk_timeout_start = time.time()
                 
                 for chunk in response.iter_content(chunk_size=2048):
+                    # Chunk szintű timeout ellenőrzés
+                    if time.time() - chunk_timeout_start > camera_timeout:
+                        print(f"[CAM] Timeout chunk olvasás közben")
+                        response.close()
+                        raise requests.exceptions.Timeout("Chunk reading timeout")
+                    
                     bytes_data += chunk
                     
                     # JPEG kezdő és vég marker keresése
@@ -194,6 +224,13 @@ def capture_frame(force_refresh=False):
                         # Dekódolás
                         img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                         if img is not None:
+                            elapsed = time.time() - start_time
+                            print(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
+                            
+                            # Sikeres letöltés - reset error counter
+                            camera_error_count = 0
+                            last_error_time = 0
+                            
                             last_image = img.copy()
                             last_image_time = time.time()
                             response.close()  # Kapcsolat lezárása
@@ -201,16 +238,29 @@ def capture_frame(force_refresh=False):
                     
                     # Védelem túl nagy letöltés ellen
                     if len(bytes_data) > max_bytes:
+                        print(f"[CAM] Max méret elérve ({max_bytes} bytes)")
                         break
                 
                 response.close()
+                print(f"[CAM] ✗ Nem található érvényes JPEG adat a válaszban")
+            else:
+                print(f"[CAM] ✗ HTTP hiba: {response.status_code}")
                 
         except requests.exceptions.Timeout:
-            print(f"[CAM] Timeout - ESP32-CAM nem válaszol időben")
+            elapsed = time.time() - start_time
+            print(f"[CAM] ✗ Timeout ({elapsed:.1f}s) - ESP32-CAM túl lassan válaszol vagy nem elérhető")
+            camera_error_count += 1
+            last_error_time = time.time()
+            
         except requests.exceptions.ConnectionError as e:
-            print(f"[CAM] Kapcsolat hiba - ESP32-CAM nem elérhető")
+            print(f"[CAM] ✗ Kapcsolat hiba - ESP32-CAM nem elérhető: {e}")
+            camera_error_count += 1
+            last_error_time = time.time()
+            
         except Exception as e:
-            print(f"[CAM] Hiba: {e}")
+            print(f"[CAM] ✗ Váratlan hiba: {e}")
+            camera_error_count += 1
+            last_error_time = time.time()
     
     return None
 
@@ -316,14 +366,29 @@ def process_frame():
 
 # ===== Monitoring szál =====
 def monitoring_thread():
-    print("[MONITOR] Elindítva")
+    print("[MONITOR] Elindítva - 2 percenkénti képellenőrzés")
+    cycle_count = 0
+    
     while monitoring_active:
         try:
-            process_frame()
-            time.sleep(30)  # 30 másodpercenként (félpercenként) ellenőrzés
+            cycle_count += 1
+            print(f"[MONITOR] Ciklus #{cycle_count} - LED állapotok ellenőrzése...")
+            
+            success = process_frame()
+            
+            if success:
+                print(f"[MONITOR] ✓ Ciklus #{cycle_count} sikeres")
+            else:
+                print(f"[MONITOR] ✗ Ciklus #{cycle_count} sikertelen - várjuk a következő próbálkozást")
+            
+            # 2 percenkénti ellenőrzés
+            print(f"[MONITOR] Várakozás 120 másodperc a következő ellenőrzésig...")
+            time.sleep(120)
+            
         except Exception as e:
-            print(f"[MONITOR] Hiba: {e}")
-            time.sleep(30)  # Hiba esetén is 30 mp várakozás
+            print(f"[MONITOR] ✗ Váratlan hiba: {e}")
+            time.sleep(120)  # Hiba esetén is 2 perc várakozás
+            
     print("[MONITOR] Leállítva")
 
 # ===== API Endpoints =====
@@ -472,6 +537,41 @@ def stop_monitoring():
 def get_states():
     """Aktuális LED állapotok"""
     return jsonify(led_states)
+
+@app.route('/api/camera/health')
+def camera_health():
+    """ESP32-CAM kamera állapotának ellenőrzése"""
+    global last_image_time, camera_error_count, last_error_time
+    
+    current_time = time.time()
+    time_since_last_image = current_time - last_image_time if last_image_time > 0 else None
+    time_since_last_error = current_time - last_error_time if last_error_time > 0 else None
+    
+    # Állapot meghatározása
+    if last_image is None:
+        status = "never_connected"
+        health = "unknown"
+    elif camera_error_count == 0:
+        status = "healthy"
+        health = "good"
+    elif camera_error_count < 3:
+        status = "degraded"
+        health = "warning"
+    else:
+        status = "unhealthy"
+        health = "critical"
+    
+    return jsonify({
+        'status': status,
+        'health': health,
+        'last_image_age_seconds': time_since_last_image,
+        'consecutive_errors': camera_error_count,
+        'time_since_last_error_seconds': time_since_last_error,
+        'camera_url': ESP32_CAM_URL,
+        'cache_duration_seconds': image_cache_duration,
+        'timeout_seconds': camera_timeout,
+        'has_cached_image': last_image is not None
+    })
 
 # ===== Alkalmazás indítása =====
 if __name__ == '__main__':
