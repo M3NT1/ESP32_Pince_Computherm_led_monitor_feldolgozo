@@ -152,6 +152,15 @@ def publish_homeassistant_discovery():
         
         mqtt_client.publish(config_topic, json.dumps(config_payload), retain=True)
         print(f"[MQTT] Discovery publikálva: {zone_name}")
+    
+    # Kezdeti állapotok publikálása (OFF vagy cache-elt érték)
+    print("[MQTT] Kezdeti állapotok publikálása...")
+    for zone in led_zones:
+        zone_id = zone['id']
+        # Ha van már tárolt állapot (pl. újraindítás után), használjuk azt
+        initial_state = led_states.get(zone_id, False)
+        publish_led_state(zone_id, initial_state)
+        print(f"[MQTT] {zone['name']}: kezdeti állapot = {'ON' if initial_state else 'OFF'}")
 
 def publish_led_state(zone_id, state):
     """LED állapot publikálása MQTT-n"""
@@ -658,30 +667,6 @@ def get_annotated_snapshot():
         border_color = tuple([int(c * 1.2) if is_on else int(c * 0.6) for c in base_color])
         border_thickness = 4 if is_on else 3
         cv2.rectangle(img_annotated, (x, y), (x+w, y+h), border_color, border_thickness)
-        
-        # Sorszám a zóna bal felső sarkában (kicsi, fehér, fekete háttérrel)
-        zone_number = str(i + 1)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        number_font_scale = 0.7
-        number_font_thickness = 2
-        
-        # Sorszám mérete
-        (num_width, num_height), num_baseline = cv2.getTextSize(zone_number, font, number_font_scale, number_font_thickness)
-        
-        # Sorszám pozíciója (bal felső sarok, kicsit beljebb)
-        num_x = x + 8
-        num_y = y + num_height + 8
-        
-        # Fekete háttér a sorszámnak
-        num_padding = 3
-        cv2.rectangle(img_annotated,
-                     (num_x - num_padding, num_y - num_height - num_padding),
-                     (num_x + num_width + num_padding, num_y + num_baseline + num_padding),
-                     (0, 0, 0), -1)
-        
-        # Fehér sorszám
-        cv2.putText(img_annotated, zone_number, (num_x, num_y),
-                   font, number_font_scale, (255, 255, 255), number_font_thickness)
     
     # BAL FELSŐ SAROKBAN: Zóna lista színes háttérrel
     list_x = 10

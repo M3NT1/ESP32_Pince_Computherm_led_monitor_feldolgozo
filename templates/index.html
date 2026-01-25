@@ -812,31 +812,65 @@
             // Zónák rajzolása csak ha showAnnotations igaz
             if (!showAnnotations) return;
             
+            // Színpaletta (ugyanaz mint app.py-ban)
+            const zoneColors = [
+                '#6464FF',  // Világoskék (BGR fordítva RGB)
+                '#64FF64',  // Világoszöld
+                '#FF96FF',  // Rózsaszín
+                '#64FFFF',  // Sárga
+                '#FF64FF',  // Lila
+                '#96FF96',  // Menta
+                '#C89664',  // Türkiz
+                '#6496FF',  // Narancs
+            ];
+            
             zones.forEach((zone, index) => {
+                const baseColor = zoneColors[index % zoneColors.length];
+                
                 // Ha ez a szerkesztendő zóna, kiemelt stílussal rajzoljuk
                 if (highlightIndex === index) {
                     ctx.strokeStyle = '#ff9800';
                     ctx.lineWidth = 4;
                     ctx.setLineDash([10, 5]); // Szaggatott vonal
                 } else {
-                    ctx.strokeStyle = '#ff0000';
-                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = baseColor;
+                    ctx.lineWidth = 3;
                     ctx.setLineDash([]); // Folytonos vonal
                 }
                 
+                // Félig átlátszó kitöltés
+                ctx.fillStyle = baseColor + '33'; // 20% opacity
+                ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+                
                 ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
-                
-                // Szöveg stílus
-                if (highlightIndex === index) {
-                    ctx.fillStyle = '#ff9800';
-                    ctx.font = 'bold 18px Arial';
-                } else {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.font = '16px Arial';
-                }
-                
-                ctx.fillText(`${index + 1}. ${zone.name}`, zone.x, zone.y - 5);
                 ctx.setLineDash([]); // Reset
+            });
+            
+            // BAL FELSŐ SAROK: Zóna lista
+            const listX = 10;
+            const listY = 10;
+            const lineHeight = 30;
+            const fontSize = 16;
+            
+            // Fekete háttér
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            let maxWidth = 0;
+            zones.forEach((zone, index) => {
+                ctx.font = `${fontSize}px Arial`;
+                const text = `${index + 1}. ${zone.name}`;
+                const width = ctx.measureText(text).width;
+                maxWidth = Math.max(maxWidth, width);
+            });
+            
+            ctx.fillRect(listX - 5, listY - 5, maxWidth + 20, zones.length * lineHeight + 10);
+            
+            // Zóna nevek
+            zones.forEach((zone, index) => {
+                const color = zoneColors[index % zoneColors.length];
+                ctx.fillStyle = color;
+                ctx.font = `bold ${fontSize}px Arial`;
+                const text = `${index + 1}. ${zone.name}`;
+                ctx.fillText(text, listX, listY + (index + 1) * lineHeight - 5);
             });
         }
         
