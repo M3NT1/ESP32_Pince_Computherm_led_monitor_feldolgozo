@@ -8,6 +8,8 @@ Az összes fontos változás ebben a projektben dokumentálva lesz ebben a fájl
 - GitHub Actions workflow deprecated `--all` flag helyettesítése explicit architektúra flagekkel
 - `config.yaml` remote image referencia eltávolítása a lokális build engedélyezéséhez
 - Docker image pull hiba javítása ("denied" error)
+- **run.sh zones konfiguráció JSON parsing hiba javítása**
+- Üres zones érték biztonságos kezelése (default: üres tömb)
 
 ## [1.0.0] - 2026-01-25
 

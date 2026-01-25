@@ -18,17 +18,23 @@ MQTT_PASSWORD=$(bashio::config 'mqtt_password')
 bashio::log.info "ESP32-CAM URL: ${ESP32_CAM_URL}"
 bashio::log.info "MQTT Broker: ${MQTT_BROKER}:${MQTT_PORT}"
 
+# Zones konfiguráció biztonságos beolvasása
+ZONES=$(bashio::config 'zones' '[]')
+if [ -z "$ZONES" ] || [ "$ZONES" = "null" ]; then
+  ZONES="[]"
+fi
+
 # Config.json létrehozása
-cat > /app/config.json <<EOL
+cat > /app/config.json <<EOF
 {
   "esp32_cam_url": "${ESP32_CAM_URL}",
   "mqtt_broker": "${MQTT_BROKER}",
   "mqtt_port": ${MQTT_PORT},
   "mqtt_user": "${MQTT_USER}",
   "mqtt_password": "${MQTT_PASSWORD}",
-  "zones": $(bashio::config 'zones' | jq -c '.')
+  "zones": ${ZONES}
 }
-EOL
+EOF
 
 bashio::log.info "Konfiguráció betöltve"
 
