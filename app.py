@@ -588,16 +588,20 @@ def get_annotated_snapshot():
     force_refresh = request.args.get('refresh', 'false').lower() == 'true'
     
     # Képet kérünk (force_refresh határozza meg hogy cache-ből vagy frissen)
-    img = capture_frame(force_refresh=force_refresh)
+    img_original = capture_frame(force_refresh=force_refresh)
     
-    if img is None:
+    if img_original is None:
         return jsonify({'error': 'ESP32-CAM nem elérhető'}), 503
     
-    # VALÓS IDEJŰ DETEKTÁLÁS minden zónára
+    # FONTOS: Detektálást az EREDETI, tiszta képen végezzük!
+    # Rajzoláshoz készítünk egy MÁSOLATOT, hogy a keretek ne befolyásolják a következő zóna detektálását
+    img_annotated = img_original.copy()
+    
+    # VALÓS IDEJŰ DETEKTÁLÁS minden zónára - TISZTA KÉPEN!
     for i, zone in enumerate(led_zones):
         zone_id = zone['id']
         # Koordináták biztonságos korrekciója
-        img_h, img_w = img.shape[:2]
+        img_h, img_w = img_original.shape[:2]
         x = max(0, min(int(zone['x']), img_w))
         y = max(0, min(int(zone['y']), img_h))
         w = max(0, min(int(zone['width']), img_w - x))
@@ -605,8 +609,8 @@ def get_annotated_snapshot():
         if w <= 0 or h <= 0:
             continue
         
-        # LED állapot detektálása
-        is_on, brightness = detect_led_brightness(img, zone)
+        # LED állapot detektálása az EREDETI képen (keretek nélkül!)
+        is_on, brightness = detect_led_brightness(img_original, zone)
         is_on = bool(is_on)
         
         # Állapotok frissítése
@@ -615,13 +619,13 @@ def get_annotated_snapshot():
         led_zones[i]['last_state'] = bool(is_on)
         led_zones[i]['last_check'] = datetime.now().isoformat()
         
-        # Keret rajzolása a detektált állapot szerint
+        # Keret rajzolása a MÁSOLATON a detektált állapot szerint
         color = (0, 255, 0) if is_on else (0, 0, 255)
-        cv2.rectangle(img, (x, y), (x+w, y+h), color, 2)
-        cv2.putText(img, zone['name'], (x, y-5), 
+        cv2.rectangle(img_annotated, (x, y), (x+w, y+h), color, 2)
+        cv2.putText(img_annotated, zone['name'], (x, y-5), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
     
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode('.jpg', img_annotated)
     return Response(buffer.tobytes(), mimetype='image/jpeg')
 
 @app.route('/api/monitoring/start', methods=['POST'])
