@@ -13,8 +13,15 @@ import threading
 import paho.mqtt.client as mqtt
 from datetime import datetime
 import os
+import logging
 
 app = Flask(__name__)
+
+# ===== Logging konfiguráció =====
+# Flask alapértelmezett logger szintjének csökkentése
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.WARNING)  # Csak WARNING és ERROR szintű üzenetek
+app.logger.setLevel(logging.INFO)  # App szintű üzenetek
 
 # ===== Konfiguráció =====
 CONFIG_FILE = 'config.json'
