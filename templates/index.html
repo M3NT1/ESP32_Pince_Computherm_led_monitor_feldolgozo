@@ -368,6 +368,11 @@
                 </div>
                 
                 <button onclick="saveConfig()">💾 Konfiguráció mentése</button>
+                <button onclick="cleanupMqtt()" class="danger" style="margin-left: 10px;">🧹 MQTT Entitások törlése</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                    💡 <strong>Tipp:</strong> Ha a Home Assistant entitások nem frissülnek, használd az "MQTT Entitások törlése" gombot, 
+                    majd indítsd újra az alkalmazást a tiszta újraregisztrációhoz.
+                </p>
             </div>
         </div>
         
@@ -540,6 +545,28 @@
             }
         }
         
+        async function cleanupMqtt() {
+            if (!confirm('⚠️ Ez törli az összes Home Assistant entitást!\n\nUtána:\n1. Indítsd újra ezt az alkalmazást\n2. Várj ~1 percet\n3. Az entitások újra megjelennek\n\nFolytatod?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/mqtt/cleanup', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ ' + data.message + '\n\n' + data.deleted_count + ' entitás törölve.');
+                } else {
+                    alert('❌ Hiba: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Hiba az MQTT cleanup során: ' + error);
+            }
+        }
+        
         // Zónák
         async function loadZones() {
             try {
@@ -638,7 +665,9 @@
         
         async function loadSnapshot() {
             try {
-                const endpoint = showAnnotations ? '/api/annotated_snapshot' : '/api/snapshot';
+                // MINDIG tiszta képet használunk a zónák beállításához!
+                // A canvas maga rajzolja rá a zónákat, ne annotált képet töltsünk be
+                const endpoint = '/api/snapshot';
                 const response = await fetch(endpoint);
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
