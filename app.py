@@ -598,6 +598,18 @@ def get_annotated_snapshot():
     img_annotated = img_original.copy()
     
     # VALÓS IDEJŰ DETEKTÁLÁS minden zónára - TISZTA KÉPEN!
+    # Egyedi színpaletta minden zónához (BGR formátum OpenCV-ben)
+    zone_colors = [
+        (255, 100, 100),   # Világoskék
+        (100, 255, 100),   # Világoszöld
+        (255, 150, 255),   # Rózsaszín
+        (100, 255, 255),   # Sárga
+        (255, 100, 255),   # Lila
+        (150, 255, 150),   # Menta
+        (200, 150, 100),   # Türkiz
+        (100, 150, 255),   # Narancs
+    ]
+    
     for i, zone in enumerate(led_zones):
         zone_id = zone['id']
         # Koordináták biztonságos korrekciója
@@ -619,11 +631,45 @@ def get_annotated_snapshot():
         led_zones[i]['last_state'] = bool(is_on)
         led_zones[i]['last_check'] = datetime.now().isoformat()
         
-        # Keret rajzolása a MÁSOLATON a detektált állapot szerint
-        color = (0, 255, 0) if is_on else (0, 0, 255)
-        cv2.rectangle(img_annotated, (x, y), (x+w, y+h), color, 2)
-        cv2.putText(img_annotated, zone['name'], (x, y-5), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        # Egyedi szín hozzárendelése minden zónához
+        base_color = zone_colors[i % len(zone_colors)]
+        
+        # Keret rajzolása a MÁSOLATON - vastagabb, átlátszó belső terület
+        # Félig átlátszó kitöltés a zóna területére (20% átlátszatlanság)
+        overlay = img_annotated.copy()
+        cv2.rectangle(overlay, (x, y), (x+w, y+h), base_color, -1)
+        cv2.addWeighted(overlay, 0.2, img_annotated, 0.8, 0, img_annotated)
+        
+        # Vastagabb keret (3px) - erősebb szín ha BE van kapcsolva
+        border_color = tuple([int(c * 1.2) if is_on else int(c * 0.6) for c in base_color])
+        border_thickness = 4 if is_on else 3
+        cv2.rectangle(img_annotated, (x, y), (x+w, y+h), border_color, border_thickness)
+        
+        # Szöveg a zóna közepére, félig átlátszó háttérrel
+        text = f"{zone['name']}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        font_thickness = 2
+        
+        # Szöveg méretének lekérdezése
+        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, font_thickness)
+        
+        # Szöveg pozíciója (zóna közepe)
+        text_x = x + (w - text_width) // 2
+        text_y = y + (h + text_height) // 2
+        
+        # Félig átlátszó téglalap háttér a szövegnek
+        padding = 5
+        bg_overlay = img_annotated.copy()
+        cv2.rectangle(bg_overlay, 
+                     (text_x - padding, text_y - text_height - padding),
+                     (text_x + text_width + padding, text_y + baseline + padding),
+                     (0, 0, 0), -1)
+        cv2.addWeighted(bg_overlay, 0.6, img_annotated, 0.4, 0, img_annotated)
+        
+        # Fehér szöveg jó kontraszthoz
+        cv2.putText(img_annotated, text, (text_x, text_y), 
+                   font, font_scale, (255, 255, 255), font_thickness)
     
     _, buffer = cv2.imencode('.jpg', img_annotated)
     return Response(buffer.tobytes(), mimetype='image/jpeg')
