@@ -367,8 +367,12 @@ def detect_led_brightness(image, zone):
     
     return is_on, brightness
 
-def process_frame():
-    """Kép feldolgozása és LED állapotok frissítése"""
+def process_frame(force_publish=False):
+    """Kép feldolgozása és LED állapotok frissítése
+    
+    Args:
+        force_publish: Ha True, minden állapotot publikál MQTT-n (nem csak változásokat)
+    """
     global last_image, led_states, led_zones
     
     img = capture_frame()
@@ -385,8 +389,12 @@ def process_frame():
         
         # Állapotváltozás detektálása
         prev_state = led_states.get(zone_id, None)
-        if prev_state != is_on:
-            print(f"[LED] {zone['name']}: {'BE' if is_on else 'KI'} (fényerő: {brightness:.1f})")
+        state_changed = prev_state != is_on
+        
+        # MQTT publikálás: változáskor VAGY force_publish esetén
+        if state_changed or force_publish:
+            if state_changed:
+                print(f"[LED] {zone['name']}: {'BE' if is_on else 'KI'} (fényerő: {brightness:.1f})")
             publish_led_state(zone_id, is_on)
         
         # Frissítjük az állapotokat MINDKÉT helyen
@@ -407,7 +415,13 @@ def monitoring_thread():
             cycle_count += 1
             print(f"[MONITOR] Ciklus #{cycle_count} - LED állapotok ellenőrzése...")
             
-            success = process_frame()
+            # Első ciklus: minden állapotot publikálunk MQTT-n (force_publish=True)
+            # Többi ciklus: csak változásokat publikálunk
+            force_publish = (cycle_count == 1)
+            if force_publish:
+                print("[MONITOR] Első ciklus - minden zóna állapotát publikáljuk MQTT-n")
+            
+            success = process_frame(force_publish=force_publish)
             
             if success:
                 print(f"[MONITOR] ✓ Ciklus #{cycle_count} sikeres")
@@ -645,31 +659,60 @@ def get_annotated_snapshot():
         border_thickness = 4 if is_on else 3
         cv2.rectangle(img_annotated, (x, y), (x+w, y+h), border_color, border_thickness)
         
-        # Szöveg a zóna közepére, félig átlátszó háttérrel
-        text = f"{zone['name']}"
+        # Sorszám a zóna bal felső sarkában (kicsi, fehér, fekete háttérrel)
+        zone_number = str(i + 1)
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        font_thickness = 2
+        number_font_scale = 0.7
+        number_font_thickness = 2
         
-        # Szöveg méretének lekérdezése
-        (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, font_thickness)
+        # Sorszám mérete
+        (num_width, num_height), num_baseline = cv2.getTextSize(zone_number, font, number_font_scale, number_font_thickness)
         
-        # Szöveg pozíciója (zóna közepe)
-        text_x = x + (w - text_width) // 2
-        text_y = y + (h + text_height) // 2
+        # Sorszám pozíciója (bal felső sarok, kicsit beljebb)
+        num_x = x + 8
+        num_y = y + num_height + 8
         
-        # Félig átlátszó téglalap háttér a szövegnek
-        padding = 5
-        bg_overlay = img_annotated.copy()
-        cv2.rectangle(bg_overlay, 
-                     (text_x - padding, text_y - text_height - padding),
-                     (text_x + text_width + padding, text_y + baseline + padding),
+        # Fekete háttér a sorszámnak
+        num_padding = 3
+        cv2.rectangle(img_annotated,
+                     (num_x - num_padding, num_y - num_height - num_padding),
+                     (num_x + num_width + num_padding, num_y + num_baseline + num_padding),
                      (0, 0, 0), -1)
-        cv2.addWeighted(bg_overlay, 0.6, img_annotated, 0.4, 0, img_annotated)
         
-        # Fehér szöveg jó kontraszthoz
-        cv2.putText(img_annotated, text, (text_x, text_y), 
-                   font, font_scale, (255, 255, 255), font_thickness)
+        # Fehér sorszám
+        cv2.putText(img_annotated, zone_number, (num_x, num_y),
+                   font, number_font_scale, (255, 255, 255), number_font_thickness)
+    
+    # BAL FELSŐ SAROKBAN: Zóna lista színes háttérrel
+    list_x = 10
+    list_y = 10
+    line_height = 30
+    list_font_scale = 0.6
+    list_font_thickness = 2
+    
+    # Félátlátszó fekete háttér a teljes listához
+    max_text_width = 0
+    for i, zone in enumerate(led_zones):
+        text = f"{i+1}. {zone['name']}"
+        (tw, th), _ = cv2.getTextSize(text, font, list_font_scale, list_font_thickness)
+        max_text_width = max(max_text_width, tw)
+    
+    list_bg_overlay = img_annotated.copy()
+    cv2.rectangle(list_bg_overlay,
+                 (list_x - 5, list_y - 5),
+                 (list_x + max_text_width + 15, list_y + len(led_zones) * line_height + 5),
+                 (0, 0, 0), -1)
+    cv2.addWeighted(list_bg_overlay, 0.7, img_annotated, 0.3, 0, img_annotated)
+    
+    # Zóna nevek felsorolása a megfelelő színekkel
+    for i, zone in enumerate(led_zones):
+        base_color = zone_colors[i % len(zone_colors)]
+        text = f"{i+1}. {zone['name']}"
+        text_y = list_y + (i + 1) * line_height - 5
+        
+        # Szöveg a zóna színével
+        cv2.putText(img_annotated, text, (list_x, text_y),
+                   font, list_font_scale, base_color, list_font_thickness)
     
     _, buffer = cv2.imencode('.jpg', img_annotated)
     return Response(buffer.tobytes(), mimetype='image/jpeg')
