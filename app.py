@@ -18,11 +18,11 @@ app = Flask(__name__)
 
 # ===== Konfiguráció =====
 CONFIG_FILE = 'config.json'
-ESP32_CAM_URL = 'http://192.168.10.130'  # ESP32-CAM IP címe
+ESP32_CAM_URL = 'http://192.168.0.67'  # ESP32-CAM IP címe
 MQTT_BROKER = 'localhost'
 MQTT_PORT = 1883
-MQTT_USER = ''  # Ha szükséges
-MQTT_PASSWORD = ''  # Ha szükséges
+MQTT_USER = 'M3NT1'  # Ha szükséges
+MQTT_PASSWORD = 'mqttzigbeejelszo'  # Ha szükséges
 MQTT_TOPIC_PREFIX = 'homeassistant/binary_sensor/led_monitor'
 
 # ===== Globális változók =====
@@ -471,6 +471,80 @@ def save_zones():
         publish_homeassistant_discovery()
     
     return jsonify({'success': True})
+
+@app.route('/api/zones/export', methods=['GET'])
+def export_zones():
+    """Zónák exportálása JSON fájlként letöltésre"""
+    from flask import send_file
+    import io
+    
+    # JSON generálása
+    zones_json = json.dumps(led_zones, indent=2, ensure_ascii=False)
+    
+    # Fájl stream létrehozása
+    buffer = io.BytesIO()
+    buffer.write(zones_json.encode('utf-8'))
+    buffer.seek(0)
+    
+    # Fájlnév időbélyeggel
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'led_zones_backup_{timestamp}.json'
+    
+    return send_file(
+        buffer,
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=filename
+    )
+
+@app.route('/api/zones/import', methods=['POST'])
+def import_zones():
+    """Zónák importálása feltöltött JSON fájlból"""
+    global led_zones
+    
+    try:
+        # Ellenőrizzük hogy van-e fájl
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'Nincs fájl kiválasztva'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Üres fájlnév'}), 400
+        
+        # JSON betöltése és validálása
+        content = file.read().decode('utf-8')
+        imported_zones = json.loads(content)
+        
+        # Validálás: lista-e
+        if not isinstance(imported_zones, list):
+            return jsonify({'success': False, 'error': 'Érvénytelen formátum: nem lista'}), 400
+        
+        # Validálás: minden elem tartalmazza-e a szükséges mezőket
+        required_fields = ['id', 'name', 'x', 'y', 'width', 'height']
+        for zone in imported_zones:
+            for field in required_fields:
+                if field not in zone:
+                    return jsonify({'success': False, 'error': f'Hiányzó mező: {field}'}), 400
+        
+        # Zónák frissítése
+        led_zones = imported_zones
+        save_config()
+        
+        # Ha MQTT aktív, frissítjük a discovery-t
+        if mqtt_client and mqtt_client.is_connected():
+            publish_homeassistant_discovery()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'{len(imported_zones)} zóna sikeresen importálva',
+            'zones': imported_zones
+        })
+        
+    except json.JSONDecodeError as e:
+        return jsonify({'success': False, 'error': f'Érvénytelen JSON: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Hiba: {str(e)}'}), 500
 
 @app.route('/api/snapshot')
 def get_snapshot():

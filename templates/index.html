@@ -383,6 +383,9 @@
                 <button onclick="loadSnapshot()">📷 Kép betöltése</button>
                 <button onclick="clearZones()" class="danger">🗑️ Összes zóna törlése</button>
                 <button onclick="saveZones()" class="success">💾 Zónák mentése</button>
+                <button onclick="exportZones()" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">📥 Export</button>
+                <button onclick="importZones()" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">📂 Import</button>
+                <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
                 
                 <div id="drawInstruction">
                     Húzz egy téglalapot a LED területre az egér lenyomásával és húzásával!
@@ -534,6 +537,67 @@
             } catch (error) {
                 alert('❌ Hiba a mentés során: ' + error);
             }
+        }
+        
+        async function exportZones() {
+            try {
+                if (zones.length === 0) {
+                    alert('⚠️ Nincsenek exportálható zónák!');
+                    return;
+                }
+                
+                // Letöltés kezdeményezése
+                window.location.href = '/api/zones/export';
+                
+                setTimeout(() => {
+                    alert('✅ Zónák exportálva! A fájl letöltése megkezdődött.');
+                }, 500);
+            } catch (error) {
+                alert('❌ Hiba az exportálás során: ' + error);
+            }
+        }
+        
+        function importZones() {
+            // File picker aktiválása
+            document.getElementById('importFileInput').click();
+        }
+        
+        async function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Ellenőrizzük hogy JSON fájl-e
+            if (!file.name.endsWith('.json')) {
+                alert('❌ Csak .json fájlok támogatottak!');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/zones/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Zónák frissítése
+                    zones = data.zones;
+                    renderZones();
+                    redrawCanvas();
+                    alert(`✅ ${data.message}`);
+                } else {
+                    alert(`❌ Import hiba: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Hiba az importálás során: ' + error);
+            }
+            
+            // Input mező tisztítása (hogy ugyanazt a fájlt is lehessen újra importálni)
+            event.target.value = '';
         }
         
         function clearZones() {
