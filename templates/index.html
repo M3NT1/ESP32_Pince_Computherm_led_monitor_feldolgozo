@@ -429,6 +429,7 @@
         let startX, startY;
         let currentZone = null;
         let monitoringInterval = null;
+        let editingZoneIndex = null;  // Szerkesztés mód
         
         // Inicializálás
         window.onload = function() {
@@ -597,39 +598,52 @@
             const height = Math.abs(endY - startY);
             
             if (width > 10 && height > 10) {
-                const zoneName = prompt('Add meg a zóna nevét (pl: Nappali, Háló):');
-                if (zoneName) {
-                    // Küszöbérték bekérése
-                    let threshold = prompt('Fényerő küszöb (10-100, alapértelmezett: 30):', '30');
-                    threshold = parseInt(threshold) || 30;
-                    threshold = Math.max(10, Math.min(100, threshold)); // 10-100 között
+                // Szerkesztési mód ellenőrzése
+                if (editingZoneIndex !== null) {
+                    // Szerkesztési mód: meglévő zóna frissítése
+                    const existingZone = zones[editingZoneIndex];
                     
-                    // LED típus bekérése
-                    const ledTypes = {
-                        '1': 'auto',
-                        '2': 'red',
-                        '3': 'white',
-                        '4': 'green',
-                        '5': 'blue',
-                        '6': 'orange',
-                        '7': 'any'
-                    };
-                    const ledChoice = prompt(
-                        'LED típus:\\n' +
-                        '1 - Automatikus (vörös/fehér/narancs)\\n' +
-                        '2 - Csak vörös\\n' +
-                        '3 - Csak fehér\\n' +
-                        '4 - Csak zöld\\n' +
-                        '5 - Csak kék\\n' +
-                        '6 - Narancs/sárga\\n' +
-                        '7 - Bármelyik szín\\n' +
-                        'Válassz (1-7, alapértelmezett: 1):', '1'
-                    );
-                    const ledType = ledTypes[ledChoice] || 'auto';
+                    // Opcionális: küszöb és LED típus módosítása
+                    const updateParams = confirm('Szeretnéd módosítani a küszöbértéket és LED típust is?');
                     
-                    const zone = {
-                        id: 'zone_' + Date.now(),
-                        name: zoneName,
+                    let threshold = existingZone.threshold;
+                    let ledType = existingZone.led_type;
+                    
+                    if (updateParams) {
+                        // Küszöbérték módosítása
+                        let thresholdInput = prompt(`Fényerő küszöb (10-100, jelenlegi: ${existingZone.threshold}):`, existingZone.threshold);
+                        threshold = parseInt(thresholdInput) || existingZone.threshold;
+                        threshold = Math.max(10, Math.min(100, threshold));
+                        
+                        // LED típus módosítása
+                        const ledTypes = {
+                            '1': 'auto',
+                            '2': 'red',
+                            '3': 'white',
+                            '4': 'green',
+                            '5': 'blue',
+                            '6': 'orange',
+                            '7': 'any'
+                        };
+                        const currentLedType = Object.keys(ledTypes).find(key => ledTypes[key] === existingZone.led_type) || '1';
+                        const ledChoice = prompt(
+                            'LED típus:\\n' +
+                            '1 - Automatikus (vörös/fehér/narancs)\\n' +
+                            '2 - Csak vörös\\n' +
+                            '3 - Csak fehér\\n' +
+                            '4 - Csak zöld\\n' +
+                            '5 - Csak kék\\n' +
+                            '6 - Narancs/sárga\\n' +
+                            '7 - Bármelyik szín\\n' +
+                            `Válassz (1-7, jelenlegi: ${currentLedType}):`, currentLedType
+                        );
+                        ledType = ledTypes[ledChoice] || existingZone.led_type;
+                    }
+                    
+                    // Zóna frissítése (ID megőrzésével!)
+                    zones[editingZoneIndex] = {
+                        id: existingZone.id,  // KRITIKUS: eredeti ID megtartása!
+                        name: existingZone.name,
                         x: Math.min(startX, endX),
                         y: Math.min(startY, endY),
                         width: width,
@@ -637,14 +651,66 @@
                         threshold: threshold,
                         led_type: ledType
                     };
-                    zones.push(zone);
-                    renderZones();
-                    redrawCanvas();
+                    
+                    // Szerkesztési mód kikapcsolása
+                    editingZoneIndex = null;
+                    
+                    // Utasítás eltüntetése
+                    const instruction = document.getElementById('drawInstruction');
+                    instruction.style.display = 'none';
+                    
+                    alert('✅ Zóna frissítve! Ne felejtsd el menteni a változtatásokat!');
+                } else {
+                    // Új zóna hozzáadása
+                    const zoneName = prompt('Add meg a zóna nevét (pl: Nappali, Háló):');
+                    if (zoneName) {
+                        // Küszöbérték bekérése
+                        let threshold = prompt('Fényerő küszöb (10-100, alapértelmezett: 30):', '30');
+                        threshold = parseInt(threshold) || 30;
+                        threshold = Math.max(10, Math.min(100, threshold)); // 10-100 között
+                        
+                        // LED típus bekérése
+                        const ledTypes = {
+                            '1': 'auto',
+                            '2': 'red',
+                            '3': 'white',
+                            '4': 'green',
+                            '5': 'blue',
+                            '6': 'orange',
+                            '7': 'any'
+                        };
+                        const ledChoice = prompt(
+                            'LED típus:\\n' +
+                            '1 - Automatikus (vörös/fehér/narancs)\\n' +
+                            '2 - Csak vörös\\n' +
+                            '3 - Csak fehér\\n' +
+                            '4 - Csak zöld\\n' +
+                            '5 - Csak kék\\n' +
+                            '6 - Narancs/sárga\\n' +
+                            '7 - Bármelyik szín\\n' +
+                            'Válassz (1-7, alapértelmezett: 1):', '1'
+                        );
+                        const ledType = ledTypes[ledChoice] || 'auto';
+                        
+                        const zone = {
+                            id: 'zone_' + Date.now(),
+                            name: zoneName,
+                            x: Math.min(startX, endX),
+                            y: Math.min(startY, endY),
+                            width: width,
+                            height: height,
+                            threshold: threshold,
+                            led_type: ledType
+                        };
+                        zones.push(zone);
+                    }
                 }
+                renderZones();
+                redrawCanvas();
             }
         }
         
-        function redrawCanvas() {
+        function redrawCanvas(highlightIndex) {
             if (!img) return;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -652,13 +718,30 @@
             
             // Zónák rajzolása
             zones.forEach((zone, index) => {
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 2;
+                // Ha ez a szerkesztendő zóna, kiemelt stílussal rajzoljuk
+                if (highlightIndex === index) {
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([10, 5]); // Szaggatott vonal
+                } else {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([]); // Folytonos vonal
+                }
+                
                 ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
                 
-                ctx.fillStyle = '#ff0000';
-                ctx.font = '16px Arial';
+                // Szöveg stílus
+                if (highlightIndex === index) {
+                    ctx.fillStyle = '#ff9800';
+                    ctx.font = 'bold 18px Arial';
+                } else {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = '16px Arial';
+                }
+                
                 ctx.fillText(`${index + 1}. ${zone.name}`, zone.x, zone.y - 5);
+                ctx.setLineDash([]); // Reset
             });
         }
         
@@ -692,6 +775,7 @@
                     </div>
                     <div class="zone-info">💡 Fényerő: <strong>${zone.last_brightness ? zone.last_brightness.toFixed(1) : 'N/A'}</strong></div>
                     <div class="zone-info">⚡ Állapot: <strong>${zone.last_state ? '🟢 BE' : '🔴 KI'}</strong></div>
+                    <button onclick="editZone(${index})" style="position: absolute; bottom: 10px; left: 10px; padding: 5px 10px; font-size: 0.8em; background: #ff9800;">✏️ Szerkeszt</button>
                     <button class="delete-btn" onclick="deleteZone(${index})">🗑️ Törlés</button>
                 `;
                 list.appendChild(card);
@@ -704,6 +788,45 @@
                 renderZones();
                 redrawCanvas();
             }
+        }
+        
+        function editZone(index) {
+            if (!img) {
+                alert('⚠️ Először töltsd be a képet!');
+                return;
+            }
+            
+            // Aktiváljuk a Zónák tabot
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('zones').classList.add('active');
+            
+            editingZoneIndex = index;
+            const zone = zones[index];
+            
+            // Utánálat információ
+            const ledTypeNames = {
+                'auto': 'Automatikus',
+                'red': 'Vörös',
+                'white': 'Fehér',
+                'green': 'Zöld',
+                'blue': 'Kék',
+                'orange': 'Narancs',
+                'any': 'Bármely'
+            };
+            
+            alert(`📝 Szerkesztési mód aktiválva!\n\nZóna: ${zone.name}\nLED típus: ${ledTypeNames[zone.led_type]}\nKüszöb: ${zone.threshold}\n\nRajzolj egy új területet a LED-hez!`);
+            
+            // Canvas frissítés ús jelöléssel
+            redrawCanvas(index);
+            
+            // Kiemelt üzenet megjelenítése
+            const instruction = document.getElementById('drawInstruction');
+            instruction.innerHTML = `📝 <strong>SZERKESZTÉSI MÓD</strong> - "${zone.name}" zóna módosítása. Rajzolj új területet!`;
+            instruction.style.display = 'block';
+            instruction.style.background = '#fff3cd';
+            instruction.style.borderColor = '#ff9800';
         }
         
         // Monitoring
