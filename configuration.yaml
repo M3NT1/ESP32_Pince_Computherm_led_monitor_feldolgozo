@@ -1,0 +1,631 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 192.168.0.99
+    - 172.16.0.0/12
+    - 127.0.0.1
+  server_host: 0.0.0.0
+  server_port: 8123
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+# Lovelace konfiguráció - alap UI szerkeszthető, egyedi dashboard yaml alapú
+lovelace:
+  mode: storage
+  resources: !include configuration/resources.yaml
+  dashboards:
+    energia-monitoring:
+      mode: yaml
+      title: Energia Monitoring
+      filename: dashboards/energia-monitoring.yaml
+      show_in_sidebar: true
+      icon: mdi:flash
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# Styrbar távirányító konfiguráció
+input_select:
+  nous_color_palette:
+    name: Nous színpaletta
+    options:
+      - Fehér
+      - Piros
+      - Zöld
+      - Kék
+      - Sárga
+      - Bíbor
+      - Cián
+      - Narancssárga
+      - Rózsaszín
+      - Lila
+      - UV
+      - Türkiz
+      - Korall
+      - Indigó
+      - Olíva
+      - Burgundi
+      - Tengerkék
+      - Barackszín
+      - Menta
+      - Borostyán
+      - Padlizsán
+      - Azúrkék
+      - Terrakotta
+      - Almazöld
+      - Levendula
+      - Okker
+      - Petrolkék
+      - Málna
+      - Fenyőzöld
+      - Ibolya
+      - Karamell
+    initial: Fehér
+
+mqtt:
+  sensor:
+    - name: "Styrbar Top Button"
+      state_topic: "zigbee2mqtt/styrbar_teo"
+      value_template: "{{ value_json.action if value_json.action in ['on', 'brightness_move_up', 'brightness_stop'] }}"
+      
+    - name: "Styrbar Bottom Button"
+      state_topic: "zigbee2mqtt/styrbar_teo"
+      value_template: "{{ value_json.action if value_json.action in ['off', 'brightness_move_down', 'brightness_stop'] }}"
+      
+    - name: "Styrbar Left Button"
+      state_topic: "zigbee2mqtt/styrbar_teo"
+      value_template: "{{ value_json.action if value_json.action in ['arrow_left_click', 'arrow_left_hold', 'arrow_left_release'] }}"
+      
+    - name: "Styrbar Right Button"
+      state_topic: "zigbee2mqtt/styrbar_teo"
+      value_template: "{{ value_json.action if value_json.action in ['arrow_right_click', 'arrow_right_hold', 'arrow_right_release'] }}"
+
+    # === VILLANYÓRA IOT SZENZOR ===
+    - name: "Villanyóra IoT Összesen"
+      unique_id: villanyora_iot_total
+      state_topic: "tele/villanyora/SENSOR"
+      value_template: "{{ value_json.ENERGY.Total }}"
+      unit_of_measurement: "kWh"
+      device_class: energy
+      state_class: total_increasing
+      icon: mdi:meter-electric
+    
+    - name: "Villanyóra IoT Pulzusok"
+      unique_id: villanyora_iot_pulses
+      state_topic: "tele/villanyora/SENSOR"
+      value_template: "{{ value_json.ENERGY.Pulses }}"
+      unit_of_measurement: "pulzus"
+      state_class: total_increasing
+      icon: mdi:pulse
+    
+    - name: "Villanyóra IoT Státusz"
+      unique_id: villanyora_iot_status
+      state_topic: "stat/villanyora/STATE"
+      value_template: "{{ value_json.Status }}"
+      icon: mdi:information-outline
+
+# Recorder konfiguráció az Energy Dashboard támogatásával
+recorder:
+  purge_keep_days: 1825
+  include:
+    domains:
+      - sensor
+      - utility_meter
+      - weather
+      - binary_sensor
+      - climate
+      - humidifier
+    entities:
+      - input_datetime.utolso_meroora_reset_ideje
+      - input_number.gas_meter_reading
+      - input_number.electricity_day_meter_reading
+      - input_number.electricity_night_meter_reading
+      - input_number.water_meter_reading
+      - input_number.gas_meter_daily_start
+      - input_number.electricity_day_meter_daily_start
+      - input_number.electricity_night_meter_daily_start
+      - input_number.water_meter_daily_start
+      - input_number.villanyora_iot_kezdo_ertek
+      - input_number.villanyora_iot_manual_base
+
+input_boolean:
+  show_service_settings:
+    name: Szerviz beállítások mutatása
+    icon: mdi:cog
+
+input_number:
+  # Gázóra
+  gas_meter_reading:
+    name: Gázóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+    icon: mdi:meter-gas
+  gas_fix_value:
+    name: Gázóra javított érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+    icon: mdi:meter-gas
+  gas_meter_daily_start:
+    name: Napi kezdő gázóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+  gas_meter_replacement_value:
+    name: Gázóra csere érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+
+  # Nappali villanyóra
+  electricity_day_meter_reading:
+    name: Nappali villanyóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny
+  electricity_day_fix_value:
+    name: Nappali villanyóra javított érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-sunny
+  electricity_day_meter_daily_start:
+    name: Napi kezdő nappali villanyóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+  electricity_day_meter_replacement_value:
+    name: Nappali villanyóra csere érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+
+  # Éjszakai villanyóra
+  electricity_night_meter_reading:
+    name: Éjszakai villanyóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+  electricity_night_fix_value:
+    name: Éjszakai villanyóra javított érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:weather-night
+  electricity_night_meter_daily_start:
+    name: Napi kezdő éjszakai villanyóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+  electricity_night_meter_replacement_value:
+    name: Éjszakai villanyóra csere érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+
+  # Vízóra
+  water_meter_reading:
+    name: Vízóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+    icon: mdi:water
+  water_fix_value:
+    name: Vízóra javított érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+    icon: mdi:water
+  water_meter_daily_start:
+    name: Napi kezdő vízóra állás
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+  water_meter_replacement_value:
+    name: Vízóra csere érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "m³"
+
+  # === VILLANYÓRA IOT SZINKRON ===
+  villanyora_iot_kezdo_ertek:
+    name: Villanyóra IoT kezdő érték
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:counter
+
+  villanyora_iot_manual_base:
+    name: Villanyóra kézi bázis (utolsó leolvasás)
+    min: 0
+    max: 999999
+    step: 0.001
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:meter-electric
+
+input_datetime:
+  energy_fix_date:
+    name: Energia javítás dátuma
+    has_date: true
+    has_time: true
+
+# ==================== TEMPLATE SZENZOROK ====================
+template:
+  - sensor:
+      # ==================== ENERGY DASHBOARD SZENZOROK (total_increasing) ====================
+      # FONTOS: Ezek az abszolút mérőóra állásokat mutatják - az Energy Dashboard ezeket használja!
+      # Az import_statistics is ezekhez a szenzor ID-khoz importál adatokat.
+      # A nevek maradnak a kompatibilitás miatt!
+      
+      - name: "electricity_day_meter_reading_diff"
+        unique_id: electricity_day_meter_diff
+        state: "{{ states('input_number.electricity_day_meter_reading') | float(0) }}"
+        device_class: energy
+        state_class: total_increasing
+        unit_of_measurement: "kWh"
+        icon: mdi:meter-electric
+
+      - name: "electricity_night_meter_reading_diff"
+        unique_id: electricity_night_meter_diff
+        state: "{{ states('input_number.electricity_night_meter_reading') | float(0) }}"
+        device_class: energy
+        state_class: total_increasing
+        unit_of_measurement: "kWh"
+        icon: mdi:weather-night
+
+      - name: "gas_meter_reading_diff"
+        unique_id: gas_meter_diff
+        state: "{{ states('input_number.gas_meter_reading') | float(0) }}"
+        device_class: gas
+        state_class: total_increasing
+        unit_of_measurement: "m³"
+        icon: mdi:meter-gas
+
+      - name: "water_meter_reading_diff"
+        unique_id: water_meter_diff
+        state: "{{ states('input_number.water_meter_reading') | float(0) }}"
+        device_class: water
+        state_class: total_increasing
+        unit_of_measurement: "m³"
+        icon: mdi:water
+
+      # ==================== NAPI FOGYASZTÁS SZENZOROK (grafikonokhoz) ====================
+      # Ezek a napi különbséget mutatják a dashboard grafikonokhoz
+      
+      - name: "Napi nappali áram"
+        unique_id: electricity_day_daily
+        state: >
+          {% set current = states('input_number.electricity_day_meter_reading')|float(0) %}
+          {% set daily_start = states('input_number.electricity_day_meter_daily_start')|float(0) %}
+          {{ (current - daily_start)|round(3) }}
+        device_class: energy
+        state_class: measurement
+        unit_of_measurement: "kWh"
+        icon: mdi:weather-sunny
+
+      - name: "Napi éjszakai áram"
+        unique_id: electricity_night_daily
+        state: >
+          {% set current = states('input_number.electricity_night_meter_reading')|float(0) %}
+          {% set daily_start = states('input_number.electricity_night_meter_daily_start')|float(0) %}
+          {{ (current - daily_start)|round(3) }}
+        device_class: energy
+        state_class: measurement
+        unit_of_measurement: "kWh"
+        icon: mdi:weather-night
+
+      - name: "Napi gáz"
+        unique_id: gas_daily
+        state: >
+          {% set current = states('input_number.gas_meter_reading')|float(0) %}
+          {% set daily_start = states('input_number.gas_meter_daily_start')|float(0) %}
+          {{ (current - daily_start)|round(3) }}
+        device_class: gas
+        state_class: measurement
+        unit_of_measurement: "m³"
+        icon: mdi:gas-cylinder
+
+      - name: "Napi víz"
+        unique_id: water_daily
+        state: >
+          {% set current = states('input_number.water_meter_reading')|float(0) %}
+          {% set daily_start = states('input_number.water_meter_daily_start')|float(0) %}
+          {{ (current - daily_start)|round(3) }}
+        device_class: water
+        state_class: measurement
+        unit_of_measurement: "m³"
+        icon: mdi:water
+
+      # ==================== HAVI/ÉVES LIMITEÁLÁSOK ====================
+      - name: "electricity_monthly_limit_usage"
+        unique_id: electricity_monthly_limit_usage
+        state: >
+          {% set day_consumption = states('sensor.electricity_day_monthly')|float(0) %}
+          {% set night_consumption = states('sensor.electricity_night_monthly')|float(0) %}
+          {% set total_consumption = day_consumption + night_consumption %}
+          {% set monthly_limit = 210 %}
+          {{ ((total_consumption / monthly_limit) * 100) | round(1) if monthly_limit > 0 else 0 }}
+        unit_of_measurement: "%"
+        icon: mdi:percent
+
+      - name: "electricity_yearly_limit_usage"
+        unique_id: electricity_yearly_limit_usage
+        state: >
+          {% set day_consumption = states('sensor.electricity_day_yearly')|float(0) %}
+          {% set night_consumption = states('sensor.electricity_night_yearly')|float(0) %}
+          {% set total_consumption = day_consumption + night_consumption %}
+          {% set yearly_limit = 2523 %}
+          {{ ((total_consumption / yearly_limit) * 100) | round(1) if yearly_limit > 0 else 0 }}
+        unit_of_measurement: "%"
+        icon: mdi:percent
+
+      - name: "gas_monthly_limit_usage"
+        unique_id: gas_monthly_limit_usage
+        state: >
+          {% set consumption = states('sensor.gas_monthly')|float(0) %}
+          {% set yearly_limit = 1729 %}
+          {% set monthly_limit = yearly_limit / 12 %}
+          {{ ((consumption / monthly_limit) * 100) | round(1) if monthly_limit > 0 else 0 }}
+        unit_of_measurement: "%"
+        icon: mdi:percent
+
+      - name: "gas_yearly_limit_usage"
+        unique_id: gas_yearly_limit_usage
+        state: >
+          {% set consumption = states('sensor.gas_yearly')|float(0) %}
+          {% set yearly_limit = 1729 %}
+          {{ ((consumption / yearly_limit) * 100) | round(1) if yearly_limit > 0 else 0 }}
+        unit_of_measurement: "%"
+        icon: mdi:percent
+
+      # ==================== KÖLTSÉG SZENZORÓK ====================
+      - name: "total_electricity_cost"
+        unique_id: total_electricity_cost
+        state: >
+          {% set day_consumption = states('sensor.napi_nappali_aram')|float(0) %}
+          {% set night_consumption = states('sensor.napi_ejszakai_aram')|float(0) %}
+          {% set total_consumption = day_consumption + night_consumption %}
+          {% set kedvezmenyes_limit = 210 %}
+          {% set kedvezmenyes_ar = 37.0 %}
+          {% set piaci_ar = 70.1 %}
+          {% if total_consumption <= kedvezmenyes_limit %}
+          {{ (total_consumption * kedvezmenyes_ar) | round(2) }}
+          {% else %}
+          {{ ((kedvezmenyes_limit * kedvezmenyes_ar) + ((total_consumption - kedvezmenyes_limit) * piaci_ar)) | round(2) }}
+          {% endif %}
+        device_class: monetary
+        state_class: measurement
+        unit_of_measurement: "HUF"
+        icon: mdi:currency-usd
+
+      - name: "gas_cost"
+        unique_id: gas_cost
+        state: >
+          {% set consumption = states('sensor.napi_gaz')|float(0) %}
+          {% set kedvezmenyes_limit = 144 %}
+          {% set kedvezmenyes_ar = 102.0 %}
+          {% set piaci_ar = 747.0 %}
+          {% if consumption <= kedvezmenyes_limit %}
+          {{ (consumption * kedvezmenyes_ar) | round(2) }}
+          {% else %}
+          {{ ((kedvezmenyes_limit * kedvezmenyes_ar) + ((consumption - kedvezmenyes_limit) * piaci_ar)) | round(2) }}
+          {% endif %}
+        device_class: monetary
+        state_class: measurement
+        unit_of_measurement: "HUF"
+        icon: mdi:currency-usd
+
+      - name: "water_cost"
+        unique_id: water_cost
+        state: >
+          {% set consumption = states('sensor.napi_viz')|float(0) %}
+          {% set vizdij = 568.20 %}
+          {% set csatornadij = 631.57 %}
+          {{ (consumption * (vizdij + csatornadij)) | round(2) }}
+        device_class: monetary
+        state_class: measurement
+        unit_of_measurement: "HUF"
+        icon: mdi:currency-usd
+
+      - name: "gas_meter_last_replacement"
+        unique_id: gas_meter_last_replacement
+        state: >
+          {% if states('input_number.gas_meter_replacement_value')|float > 0 %}
+            {{ states('input_number.gas_meter_reading') }}
+          {% else %}
+            {{ states('sensor.gas_meter_last_replacement') }}
+          {% endif %}
+        attributes:
+          last_replacement_date: >
+            {% if states('input_number.gas_meter_replacement_value')|float > 0 %}
+              {{ now().strftime('%Y-%m-%d %H:%M:%S') }}
+            {% else %}
+              {{ state_attr('sensor.gas_meter_last_replacement', 'last_replacement_date') }}
+            {% endif %}
+          last_value: >
+            {% if states('input_number.gas_meter_replacement_value')|float > 0 %}
+              {{ states('input_number.gas_meter_reading') }}
+            {% else %}
+              {{ state_attr('sensor.gas_meter_last_replacement', 'last_value') }}
+            {% endif %}
+
+      # ==================== NAPI KÖLTSÉG SZENZORÓK ====================
+      - name: "Napi áram költség"
+        unique_id: daily_electricity_cost
+        unit_of_measurement: "Ft"
+        state: >
+          {% set day_consumption = states('sensor.napi_nappali_aram') | float(0) %}
+          {% set night_consumption = states('sensor.napi_ejszakai_aram') | float(0) %}
+          {% set day_price = 70.227 %}
+          {% set night_price = 44.946 %}
+          {{ (day_consumption * day_price + night_consumption * night_price) | round(2) }}
+
+      - name: "Napi gáz költség"
+        unique_id: daily_gas_cost
+        unit_of_measurement: "Ft"
+        state: >
+          {% set consumption = states('sensor.napi_gaz') | float(0) %}
+          {% set price = 747 %}
+          {{ (consumption * price) | round(2) }}
+
+      - name: "Napi víz költség"
+        unique_id: daily_water_cost
+        unit_of_measurement: "Ft"
+        state: >
+          {% set consumption = states('sensor.napi_viz') | float(0) %}
+          {% set price = 321.84 %}
+          {{ (consumption * price) | round(2) }}
+
+      # ==================== DÁTUMOZOTT MÉTERÖK (IMPORT STATISTICS-hez) ====================
+      - name: "Gázmérő 2024.02"
+        unique_id: gas_meter_202402_a1k7
+        unit_of_measurement: "m³"
+        state_class: total_increasing
+        device_class: gas
+        state: "{{ states('input_number.gas_meter_reading') | float(0) }}"
+
+      - name: "Gázmérő 2025.04"
+        unique_id: gas_meter_202504_x9m3
+        unit_of_measurement: "m³"
+        state_class: total_increasing
+        device_class: gas
+        state: "{{ states('input_number.gas_meter_reading') | float(0) }}"
+
+      - name: "Villanyóra Nappali 2024.02"
+        unique_id: electricity_day_202402_b4z2
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        device_class: energy
+        state: "{{ states('input_number.electricity_day_meter_reading') | float(0) }}"
+
+      - name: "Villanyóra Nappali 2025.09"
+        unique_id: electricity_day_202509_p8k1
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        device_class: energy
+        state: "{{ states('input_number.electricity_day_meter_reading') | float(0) }}"
+
+      - name: "Villanyóra Éjszakai 2024.02"
+        unique_id: electricity_night_202402_c5j6
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        device_class: energy
+        state: "{{ states('input_number.electricity_night_meter_reading') | float(0) }}"
+
+      - name: "Villanyóra Éjszakai 2025.09"
+        unique_id: electricity_night_202509_t2w4
+        unit_of_measurement: "kWh"
+        state_class: total_increasing
+        device_class: energy
+        state: "{{ states('input_number.electricity_night_meter_reading') | float(0) }}"
+
+      - name: "Vízóra 2025.07"
+        unique_id: water_meter_202507_d3n8
+        unit_of_measurement: "m³"
+        state_class: total_increasing
+        device_class: water
+        state: "{{ states('input_number.water_meter_reading') | float(0) }}"
+
+      - name: "Vízóra 2025.10"
+        unique_id: water_meter_202510_h7r5
+        unit_of_measurement: "m³"
+        state_class: total_increasing
+        device_class: water
+        state: "{{ states('input_number.water_meter_reading') | float(0) }}"
+
+utility_meter:
+  gas_daily:
+    source: sensor.napi_gaz
+    cycle: daily
+    name: Napi gázfogyasztás
+  gas_monthly:
+    source: sensor.napi_gaz
+    cycle: monthly
+    name: Havi gázfogyasztás
+  gas_yearly:
+    source: sensor.napi_gaz
+    cycle: yearly
+    name: Éves gázfogyasztás
+  electricity_day_monthly:
+    source: sensor.napi_nappali_aram
+    cycle: monthly
+    name: Havi nappali áramfogyasztás
+  electricity_day_yearly:
+    source: sensor.napi_nappali_aram
+    cycle: yearly
+    name: Éves nappali áramfogyasztás
+  electricity_night_monthly:
+    source: sensor.napi_ejszakai_aram
+    cycle: monthly
+    name: Havi éjszakai áramfogyasztás
+  electricity_night_yearly:
+    source: sensor.napi_ejszakai_aram
+    cycle: yearly
+    name: Éves éjszakai áramfogyasztás
+  water_monthly:
+    source: sensor.napi_viz
+    cycle: monthly
+    name: Havi vízfogyasztás
+
+calendar:
+  - platform: caldav
+    url: https://calendar.google.com/calendar/ical/a323630e641021c28ee624ea18c448fea7270016ba3a800486ba5f76aad5e8dc%40group.calendar.google.com/private-7973be7f1f6fbba9c13c627b0b12fdc7/basic.ics
+    scan_interval:
+      minutes: 10
+
+notify:
+  - name: gmail_notification
+    platform: smtp
+    server: smtp.gmail.com
+    port: 587
+    timeout: 15
+    sender: kismenti@gmail.com
+    encryption: starttls
+    username: kismenti@gmail.com
+    password: !secret gmail_app_password
+    recipient:
+      - kismenti@gmail.com
+      - papdanna@gmail.com
+    sender_name: Hazikonk - HA

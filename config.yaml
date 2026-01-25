@@ -1,5 +1,5 @@
 name: "ESP32-CAM LED Monitor"
-version: "1.0.0"
+version: "1.0.2"
 slug: esp32cam_led_monitor
 description: "ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz"
 url: "https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"
@@ -11,6 +11,9 @@ arch:
 init: false
 startup: application
 boot: auto
+webui: "http://[HOST]:[PORT:5001]"
+ingress: true
+panel_icon: mdi:led-on
 ports:
   5001/tcp: 5001
 ports_description:

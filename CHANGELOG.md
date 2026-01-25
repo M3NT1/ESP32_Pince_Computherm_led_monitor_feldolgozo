@@ -1,54 +1,48 @@
 # Changelog
 
-Az összes fontos változás ebben a projektben dokumentálva lesz ebben a fájlban.
+## 1.0.2
 
-## [1.0.1] - 2026-01-25
+- **Új**: "Open Web UI" gomb megjelenítése Home Assistant addon felületen
+- **Új**: Ingress támogatás - addon UI közvetlenül Home Assistant-ben
+- **Javítva**: Zónák fül mindig tiszta képet használ (nem annotáltat)
+- **Új**: MQTT újraregisztráció funkció entitások frissítéséhez
+- **Dokumentáció**: Részletes útmutató régi MQTT entitások kézi törléséhez
+- **Javítva**: Font változó hibajavítás annotated_snapshot endpoint-ban
 
-### Javítva
-- GitHub Actions workflow deprecated `--all` flag helyettesítése explicit architektúra flagekkel
-- `config.yaml` remote image referencia eltávolítása a lokális build engedélyezéséhez
-- Docker image pull hiba javítása ("denied" error)
-- **run.sh zones konfiguráció JSON parsing hiba javítása**
-- Üres zones érték biztonságos kezelése (default: üres tömb)
-- **paho-mqtt kompatibilitás javítása 1.x és 2.x verziókhoz**
-- MQTT Client inicializálás backward compatibility
+## 1.0.1
 
-## [1.0.0] - 2026-01-25
+- **Javítva**: GitHub Actions workflow deprecated flagek javítása
+- **Javítva**: config.yaml remote image referencia eltávolítása
+- **Javítva**: Docker image pull hiba (denied error)
+- **Javítva**: run.sh zones konfiguráció JSON parsing
+- **Javítva**: paho-mqtt 1.x és 2.x kompatibilitás
+- **Javítva**: MQTT Client backward compatibility
 
-### Hozzáadva
-- ✅ Home Assistant Add-on támogatás
-- ✅ HACS Custom Repository integráció
-- ✅ Automatikus konfiguráció Home Assistant Add-on options-ből
-- ✅ Multi-arch Docker image támogatás (aarch64, amd64, armhf, armv7)
-- ✅ Webes konfiguráló felület
-- ✅ Többszínű LED detektálás (vörös, zöld, kék, fehér, narancs)
-- ✅ MQTT auto-discovery Home Assistant számára
-- ✅ Valós idejű monitoring
-- ✅ ESP32-CAM stream támogatás
-- ✅ Képfeldolgozás cache-eléssel
-- ✅ Binary sensor entitások Home Assistanthez
-- ✅ Konfigurálható LED zónák
-- ✅ Állítható érzékenység (threshold)
+## 1.0.0
 
-### Változtatva
-- config.json automatikus generálása Add-on módban
-- Portszám 5000 → 5001 a kiegészítő alkalmazásokhoz
+- **Új**: Home Assistant Add-on támogatás
+- **Új**: HACS Custom Repository integráció
+- **Új**: Automatikus konfiguráció Add-on options-ből
+- **Új**: Multi-arch Docker támogatás (aarch64, amd64, armhf, armv7)
+- **Új**: Webes konfiguráló felület
+- **Új**: Többszínű LED detektálás (vörös, zöld, kék, fehér, narancs)
+- **Új**: MQTT auto-discovery Home Assistant számára
+- **Új**: Valós idejű monitoring 2 perces ciklusokkal
+- **Új**: ESP32-CAM stream támogatás
+- **Új**: Képfeldolgozás intelligens cache-eléssel
+- **Új**: Binary sensor entitások Home Assistanthez
+- **Új**: Konfigurálható LED zónák drag-and-drop felülettel
+- **Új**: Állítható érzékenység (threshold) zónánként
+- **Változás**: config.json automatikus generálása Add-on módban
+- **Változás**: Portszám 5000 → 5001
+- **Javítva**: ESP32-CAM 2 perces timeout kezelés exponential backoff-fal
+- **Javítva**: MQTT újracsatlakozási logika
+- **Javítva**: Memória optimalizálás képfeldolgozáshoz
 
-### Javítva
-- ESP32-CAM timeout kezelése
-- MQTT újracsatlakozási logika
-- Memória optimalizálás képfeldolgozáshoz
+## 0.9.0
 
-## [0.9.0] - 2026-01-20
-
-### Hozzáadva
-- Kezdeti verzió standalone Python alkalmazásként
+- **Kezdeti verzió**: Standalone Python alkalmazás
 - OpenCV képfeldolgozás
 - Flask webes felület
 - MQTT integráció
 - Raspberry Pi telepítő script
-
----
-
-A formátum [Keep a Changelog](https://keepachangelog.com/hu/1.0.0/) alapján,
-és ez a projekt a [Semantic Versioning](https://semver.org/spec/v2.0.0.html) szabványt követi.
