@@ -368,11 +368,23 @@
                 </div>
                 
                 <button onclick="saveConfig()">💾 Konfiguráció mentése</button>
-                <button onclick="cleanupMqtt()" class="danger" style="margin-left: 10px;">🧹 MQTT Entitások törlése</button>
-                <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
-                    💡 <strong>Tipp:</strong> Ha a Home Assistant entitások nem frissülnek, használd az "MQTT Entitások törlése" gombot, 
-                    majd indítsd újra az alkalmazást a tiszta újraregisztrációhoz.
-                </p>
+                <button onclick="forceRediscovery()" style="margin-left: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 MQTT Újraregisztráció</button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 5px solid #ffc107; border-radius: 5px;">
+                    <h3 style="color: #856404; margin-bottom: 10px;">📋 Régi/Nem használt entitások törlése</h3>
+                    <p style="color: #856404; line-height: 1.6; margin-bottom: 10px;">
+                        Ha régi, már nem használt entitások zavarnak a Home Assistant-ben:
+                    </p>
+                    <ol style="color: #856404; line-height: 1.8; margin-left: 20px;">
+                        <li><strong>Settings</strong> → <strong>Devices & Services</strong> → <strong>MQTT</strong></li>
+                        <li>Keresd meg a "Fűtés [név]" entitásokat</li>
+                        <li>Kattints a törölni kívánt entitásra → <strong>Jobb felső sarokban ⚙️</strong> → <strong>"Delete"</strong></li>
+                        <li>Vagy használd a <code>Developer Tools → Services → mqtt.reload</code> service-t az összes MQTT entitás újratöltéséhez</li>
+                    </ol>
+                    <p style="color: #856404; margin-top: 10px;">
+                        💡 <strong>Tipp:</strong> A fenti "🔄 MQTT Újraregisztráció" gomb újraküldi a jelenlegi zónák konfigurációját.
+                    </p>
+                </div>
             </div>
         </div>
         
@@ -545,25 +557,25 @@
             }
         }
         
-        async function cleanupMqtt() {
-            if (!confirm('⚠️ Ez törli az összes Home Assistant entitást!\n\nUtána:\n1. Indítsd újra ezt az alkalmazást\n2. Várj ~1 percet\n3. Az entitások újra megjelennek\n\nFolytatod?')) {
+        async function forceRediscovery() {
+            if (!confirm('🔄 MQTT Discovery újraküldése\n\nEz újraküldi a jelenlegi zónák konfigurációját a Home Assistant-nek.\nNEM töröl semmit!\n\nFolytatod?')) {
                 return;
             }
             
             try {
-                const response = await fetch('/api/mqtt/cleanup', {
+                const response = await fetch('/api/mqtt/rediscover', {
                     method: 'POST'
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert('✅ ' + data.message + '\n\n' + data.deleted_count + ' entitás törölve.');
+                    alert('✅ ' + data.message + '\n\n' + data.zone_count + ' zóna újraregisztrálva.');
                 } else {
                     alert('❌ Hiba: ' + data.error);
                 }
             } catch (error) {
-                alert('❌ Hiba az MQTT cleanup során: ' + error);
+                alert('❌ Hiba az MQTT rediscovery során: ' + error);
             }
         }
         

@@ -724,32 +724,23 @@ def get_states():
     """Aktuális LED állapotok"""
     return jsonify(led_states)
 
-@app.route('/api/mqtt/cleanup', methods=['POST'])
-def mqtt_cleanup():
-    """MQTT discovery config-ok törlése (Home Assistant entitások eltávolítása)"""
+@app.route('/api/mqtt/rediscover', methods=['POST'])
+def mqtt_rediscover():
+    """MQTT discovery újraküldése a jelenlegi zónákra (force refresh)"""
     if not mqtt_client or not mqtt_client.is_connected():
         return jsonify({'success': False, 'error': 'MQTT nem csatlakozva'}), 503
     
     try:
-        deleted_count = 0
-        for zone in led_zones:
-            zone_id = zone['id']
-            # Config topic törlése (üres payload, retain=True)
-            config_topic = f"{MQTT_TOPIC_PREFIX}/{zone_id}/config"
-            mqtt_client.publish(config_topic, '', retain=True)
-            # State topic törlése
-            state_topic = f"{MQTT_TOPIC_PREFIX}/{zone_id}/state"
-            mqtt_client.publish(state_topic, '', retain=True)
-            deleted_count += 1
-            print(f"[MQTT] Cleanup: {zone['name']} config törölve")
+        # Discovery újraküldése
+        publish_homeassistant_discovery()
         
         return jsonify({
             'success': True,
-            'message': f'{deleted_count} entitás config törölve. Indítsd újra a Home Assistant-ot vagy várj ~1 percet.',
-            'deleted_count': deleted_count
+            'message': f'{len(led_zones)} zóna discovery újraküldve. Várj ~30 másodpercet hogy a Home Assistant észrevegye.',
+            'zone_count': len(led_zones)
         })
     except Exception as e:
-        print(f"[MQTT] Cleanup hiba: {e}")
+        print(f"[MQTT] Rediscovery hiba: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/camera/health')
