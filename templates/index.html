@@ -385,6 +385,7 @@
                 <button onclick="saveZones()" class="success">💾 Zónák mentése</button>
                 <button onclick="exportZones()" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">📥 Export</button>
                 <button onclick="importZones()" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">📂 Import</button>
+                <button id="toggleAnnotationsZones" onclick="toggleAnnotations('zones')" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">👁️ Kijelölések elrejtése</button>
                 <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="handleImportFile(event)">
                 
                 <div id="drawInstruction">
@@ -410,6 +411,7 @@
                     <button onclick="startMonitoring()" class="success">▶️ Indítás</button>
                     <button onclick="stopMonitoring()" class="danger">⏹️ Leállítás</button>
                     <button onclick="refreshStates()">🔄 Frissítés</button>
+                    <button id="toggleAnnotationsMonitor" onclick="toggleAnnotations('monitor')" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">👁️ Kijelölések elrejtése</button>
                 </div>
             </div>
             
@@ -460,7 +462,8 @@
                 refreshStates();
                 if (!monitoringInterval) {
                     monitoringInterval = setInterval(() => {
-                        document.getElementById('liveImage').src = '/api/annotated_snapshot?' + new Date().getTime();
+                        const endpoint = showAnnotations ? '/api/annotated_snapshot' : '/api/snapshot';
+                        document.getElementById('liveImage').src = endpoint + '?' + new Date().getTime();
                         refreshStates();
                     }, 2000);
                 }
@@ -469,6 +472,30 @@
                     clearInterval(monitoringInterval);
                     monitoringInterval = null;
                 }
+            }
+        }
+        
+        function toggleAnnotations(context) {
+            showAnnotations = !showAnnotations;
+            const btnZones = document.getElementById('toggleAnnotationsZones');
+            const btnMonitor = document.getElementById('toggleAnnotationsMonitor');
+            
+            if (showAnnotations) {
+                if (btnZones) btnZones.innerHTML = '👁️ Kijelölések elrejtése';
+                if (btnMonitor) btnMonitor.innerHTML = '👁️ Kijelölések elrejtése';
+            } else {
+                if (btnZones) btnZones.innerHTML = '👁️ Kijelölések megjelenítése';
+                if (btnMonitor) btnMonitor.innerHTML = '👁️ Kijelölések megjelenítése';
+            }
+            
+            // Frissítjük a képet az aktuális kontextusban
+            if (context === 'zones' && img) {
+                redrawCanvas();
+            } else if (context === 'monitor') {
+                // Monitor esetén az élő kép automatikusan frissül a következő interval-nál
+                // De azonnal frissítjük:
+                const endpoint = showAnnotations ? '/api/annotated_snapshot' : '/api/snapshot';
+                document.getElementById('liveImage').src = endpoint + '?' + new Date().getTime();
             }
         }
         
@@ -610,7 +637,8 @@
         
         async function loadSnapshot() {
             try {
-                const response = await fetch('/api/snapshot');
+                const endpoint = showAnnotations ? '/api/annotated_snapshot' : '/api/snapshot';
+                const response = await fetch(endpoint);
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 
@@ -780,7 +808,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
             
-            // Zónák rajzolása
+            // Zónák rajzolása csak ha showAnnotations igaz
+            if (!showAnnotations) return;
+            
             zones.forEach((zone, index) => {
                 // Ha ez a szerkesztendő zóna, kiemelt stílussal rajzoljuk
                 if (highlightIndex === index) {
