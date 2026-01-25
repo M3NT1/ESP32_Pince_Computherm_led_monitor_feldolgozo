@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- **Új**: Konfigurálható log szint addon beállításokából (DEBUG/INFO/WARNING/ERROR)
+- **Javítva**: Logging szintek optimalizálása production környezethez
+- **Változás**: Rutin műveletek (ciklus számlálás, várakozás) DEBUG szintre helyezve
+- **Változás**: Csak LED változások és hibák jelennek meg INFO/WARNING/ERROR szinten
+- **Javítva**: Log spam csökkentése - ~3600 sor/nap helyett csak releváns események
+
 ## 1.0.2
 
 - **Új**: "Open Web UI" gomb megjelenítése Home Assistant addon felületen

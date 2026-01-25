@@ -1,5 +1,5 @@
 name: "ESP32-CAM LED Monitor"
-version: "1.0.2"
+version: "1.0.3"
 slug: esp32cam_led_monitor
 description: "ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz"
 url: "https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"
@@ -30,6 +30,7 @@ options:
   mqtt_port: 1883
   mqtt_user: ""
   mqtt_password: ""
+  log_level: "INFO"
   zones: []
 schema:
   esp32_cam_url: str
@@ -37,6 +38,7 @@ schema:
   mqtt_port: port
   mqtt_user: str?
   mqtt_password: password?
+  log_level: list(DEBUG|INFO|WARNING|ERROR)?
   zones: 
     - name: str
       id: str

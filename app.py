@@ -21,7 +21,6 @@ app = Flask(__name__)
 # Flask alapértelmezett logger szintjének csökkentése
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.WARNING)  # Csak WARNING és ERROR szintű üzenetek
-app.logger.setLevel(logging.INFO)  # App szintű üzenetek
 
 # ===== Konfiguráció =====
 CONFIG_FILE = 'config.json'
@@ -31,6 +30,7 @@ MQTT_PORT = 1883
 MQTT_USER = 'M3NT1'  # Ha szükséges
 MQTT_PASSWORD = 'mqttzigbeejelszo'  # Ha szükséges
 MQTT_TOPIC_PREFIX = 'homeassistant/binary_sensor/led_monitor'
+LOG_LEVEL = 'INFO'  # Alapértelmezett log szint
 
 # ===== Globális változók =====
 led_zones = []
@@ -49,12 +49,12 @@ camera_lock = threading.Lock()
 
 # ===== Konfiguráció betöltése =====
 def load_config():
-    global led_zones, ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD
+    global led_zones, ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, LOG_LEVEL
     
     # Home Assistant Add-on options ellenőrzése
     addon_options = '/data/options.json'
     if os.path.exists(addon_options):
-        print("[CONFIG] Home Assistant Add-on mód detektálva")
+        app.logger.info("[CONFIG] Home Assistant Add-on mód detektálva")
         # Az Add-on már generálta a config.json-t a run.sh-ban
         # Itt csak ellenőrizzük
     
@@ -68,9 +68,17 @@ def load_config():
             MQTT_PORT = config.get('mqtt_port', MQTT_PORT)
             MQTT_USER = config.get('mqtt_user', '')
             MQTT_PASSWORD = config.get('mqtt_password', '')
-            print(f"[CONFIG] Betöltve {len(led_zones)} zóna")
+            LOG_LEVEL = config.get('log_level', 'INFO').upper()
+            
+            # Logging szint beállítása
+            numeric_level = getattr(logging, LOG_LEVEL, logging.INFO)
+            app.logger.setLevel(numeric_level)
+            
+            app.logger.info(f"[CONFIG] Betöltve {len(led_zones)} zóna")
+            app.logger.info(f"[CONFIG] Log szint: {LOG_LEVEL}")
     else:
-        print(f"[CONFIG] {CONFIG_FILE} nem található, alapértelmezett értékek használata")
+        app.logger.warning(f"[CONFIG] {CONFIG_FILE} nem található, alapértelmezett értékek használata")
+        app.logger.setLevel(logging.INFO)
 
 def save_config():
     config = {
@@ -79,23 +87,24 @@ def save_config():
         'mqtt_broker': MQTT_BROKER,
         'mqtt_port': MQTT_PORT,
         'mqtt_user': MQTT_USER,
-        'mqtt_password': MQTT_PASSWORD
+        'mqtt_password': MQTT_PASSWORD,
+        'log_level': LOG_LEVEL
     }
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
-    print("[CONFIG] Mentve")
+    app.logger.info("[CONFIG] Mentve")
 
 # ===== MQTT Kapcsolat =====
 def on_mqtt_connect(client, userdata, flags, rc):
     if rc == 0:
-        print(f"[MQTT] Kapcsolódva: {MQTT_BROKER}:{MQTT_PORT}")
+        app.logger.info(f"[MQTT] Kapcsolódva: {MQTT_BROKER}:{MQTT_PORT}")
         # Auto-discovery üzenetek küldése Home Assistant számára
         publish_homeassistant_discovery()
     else:
-        print(f"[MQTT] Kapcsolódási hiba: {rc}")
+        app.logger.error(f"[MQTT] Kapcsolódási hiba: {rc}")
 
 def on_mqtt_disconnect(client, userdata, rc):
-    print(f"[MQTT] Kapcsolat megszakadt: {rc}")
+    app.logger.warning(f"[MQTT] Kapcsolat megszakadt: {rc}")
 
 def init_mqtt():
     global mqtt_client
@@ -121,7 +130,7 @@ def init_mqtt():
         mqtt_client.loop_start()
         return True
     except Exception as e:
-        print(f"[MQTT] Kapcsolódási hiba: {e}")
+        app.logger.error(f"[MQTT] Kapcsolódási hiba: {e}")
         return False
 
 def publish_homeassistant_discovery():
@@ -151,16 +160,16 @@ def publish_homeassistant_discovery():
         }
         
         mqtt_client.publish(config_topic, json.dumps(config_payload), retain=True)
-        print(f"[MQTT] Discovery publikálva: {zone_name}")
+        app.logger.debug(f"[MQTT] Discovery publikálva: {zone_name}")
     
     # Kezdeti állapotok publikálása (OFF vagy cache-elt érték)
-    print("[MQTT] Kezdeti állapotok publikálása...")
+    app.logger.debug("[MQTT] Kezdeti állapotok publikálása...")
     for zone in led_zones:
         zone_id = zone['id']
         # Ha van már tárolt állapot (pl. újraindítás után), használjuk azt
         initial_state = led_states.get(zone_id, False)
         publish_led_state(zone_id, initial_state)
-        print(f"[MQTT] {zone['name']}: kezdeti állapot = {'ON' if initial_state else 'OFF'}")
+        app.logger.debug(f"[MQTT] {zone['name']}: kezdeti állapot = {'ON' if initial_state else 'OFF'}")
 
 def publish_led_state(zone_id, state):
     """LED állapot publikálása MQTT-n"""
@@ -189,7 +198,7 @@ def capture_frame(force_refresh=False):
         time_since_last_force = current_time - last_force_refresh_time
         if last_force_refresh_time > 0 and time_since_last_force < force_refresh_cooldown:
             remaining_cooldown = force_refresh_cooldown - time_since_last_force
-            print(f"[CAM] Rate limit: várj még {remaining_cooldown:.1f} másodpercet a következő friss képig")
+            app.logger.debug(f"[CAM] Rate limit: várj még {remaining_cooldown:.1f} másodpercet a következő friss képig")
             # Adj vissza cache-elt képet ha van
             if last_image is not None:
                 return last_image.copy()
@@ -208,7 +217,7 @@ def capture_frame(force_refresh=False):
         
         if time_since_error < backoff_time:
             remaining = backoff_time - time_since_error
-            print(f"[CAM] Backoff: várakozás {remaining:.0f} másodperc ({camera_error_count} egymás utáni hiba)")
+            app.logger.debug(f"[CAM] Backoff: várakozás {remaining:.0f} másodperc ({camera_error_count} egymás utáni hiba)")
             # Ha van cache-elt kép, adjuk vissza azt még ha régi is
             if last_image is not None:
                 return last_image.copy()
@@ -220,7 +229,7 @@ def capture_frame(force_refresh=False):
         if not force_refresh and last_image is not None and (time.time() - last_image_time) < image_cache_duration:
             return last_image.copy()
         
-        print(f"[CAM] Kép letöltése ESP32-CAM-ről (timeout: {camera_timeout}s)...")
+        app.logger.debug(f"[CAM] Kép letöltése ESP32-CAM-ről (timeout: {camera_timeout}s)...")
         start_time = time.time()
         
         try:
@@ -244,13 +253,13 @@ def capture_frame(force_refresh=False):
                     # Chunk szintű timeout ellenőrzés - 30 sec inaktivitás után timeout
                     time_since_last_chunk = current_chunk_time - last_chunk_time
                     if time_since_last_chunk > 30:
-                        print(f"[CAM] Timeout: {time_since_last_chunk:.1f}s eltelt az utolsó chunk óta")
+                        app.logger.warning(f"[CAM] Timeout: {time_since_last_chunk:.1f}s eltelt az utolsó chunk óta")
                         response.close()
                         raise requests.exceptions.Timeout("Chunk reading timeout")
                     
                     # Teljes idő ellenőrzés
                     if current_chunk_time - start_time > camera_timeout:
-                        print(f"[CAM] Timeout: teljes idő ({camera_timeout}s) lejárt")
+                        app.logger.warning(f"[CAM] Timeout: teljes idő ({camera_timeout}s) lejárt")
                         response.close()
                         raise requests.exceptions.Timeout("Total timeout exceeded")
                     
@@ -267,7 +276,7 @@ def capture_frame(force_refresh=False):
                         img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                         if img is not None:
                             elapsed = time.time() - start_time
-                            print(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
+                            app.logger.debug(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
                             
                             # Sikeres letöltés - reset error counter
                             camera_error_count = 0
@@ -280,27 +289,27 @@ def capture_frame(force_refresh=False):
                     
                     # Védelem túl nagy letöltés ellen
                     if len(bytes_data) > max_bytes:
-                        print(f"[CAM] Max méret elérve ({max_bytes} bytes)")
+                        app.logger.warning(f"[CAM] Max méret elérve ({max_bytes} bytes)")
                         break
                 
                 response.close()
-                print(f"[CAM] ✗ Nem található érvényes JPEG adat a válaszban")
+                app.logger.warning(f"[CAM] ✗ Nem található érvényes JPEG adat a válaszban")
             else:
-                print(f"[CAM] ✗ HTTP hiba: {response.status_code}")
+                app.logger.error(f"[CAM] ✗ HTTP hiba: {response.status_code}")
                 
         except requests.exceptions.Timeout:
             elapsed = time.time() - start_time
-            print(f"[CAM] ✗ Timeout ({elapsed:.1f}s) - ESP32-CAM túl lassan válaszol vagy nem elérhető")
+            app.logger.error(f"[CAM] ✗ Timeout ({elapsed:.1f}s) - ESP32-CAM túl lassan válaszol vagy nem elérhető")
             camera_error_count += 1
             last_error_time = time.time()
             
         except requests.exceptions.ConnectionError as e:
-            print(f"[CAM] ✗ Kapcsolat hiba - ESP32-CAM nem elérhető: {e}")
+            app.logger.error(f"[CAM] ✗ Kapcsolat hiba - ESP32-CAM nem elérhető: {e}")
             camera_error_count += 1
             last_error_time = time.time()
             
         except Exception as e:
-            print(f"[CAM] ✗ Váratlan hiba: {e}")
+            app.logger.error(f"[CAM] ✗ Váratlan hiba: {e}")
             camera_error_count += 1
             last_error_time = time.time()
     
@@ -403,7 +412,7 @@ def process_frame(force_publish=False):
         # MQTT publikálás: változáskor VAGY force_publish esetén
         if state_changed or force_publish:
             if state_changed:
-                print(f"[LED] {zone['name']}: {'BE' if is_on else 'KI'} (fényerő: {brightness:.1f})")
+                app.logger.info(f"[LED] {zone['name']}: {'BE' if is_on else 'KI'} (fényerő: {brightness:.1f})")
             publish_led_state(zone_id, is_on)
         
         # Frissítjük az állapotokat MINDKÉT helyen
@@ -416,36 +425,36 @@ def process_frame(force_publish=False):
 
 # ===== Monitoring szál =====
 def monitoring_thread():
-    print("[MONITOR] Elindítva - 2 percenkénti képellenőrzés")
+    app.logger.info("[MONITOR] Elindítva - 2 percenkénti képellenőrzés")
     cycle_count = 0
     
     while monitoring_active:
         try:
             cycle_count += 1
-            print(f"[MONITOR] Ciklus #{cycle_count} - LED állapotok ellenőrzése...")
+            app.logger.debug(f"[MONITOR] Ciklus #{cycle_count} - LED állapotok ellenőrzése...")
             
             # Első ciklus: minden állapotot publikálunk MQTT-n (force_publish=True)
             # Többi ciklus: csak változásokat publikálunk
             force_publish = (cycle_count == 1)
             if force_publish:
-                print("[MONITOR] Első ciklus - minden zóna állapotát publikáljuk MQTT-n")
+                app.logger.debug("[MONITOR] Első ciklus - minden zóna állapotát publikáljuk MQTT-n")
             
             success = process_frame(force_publish=force_publish)
             
             if success:
-                print(f"[MONITOR] ✓ Ciklus #{cycle_count} sikeres")
+                app.logger.debug(f"[MONITOR] ✓ Ciklus #{cycle_count} sikeres")
             else:
-                print(f"[MONITOR] ✗ Ciklus #{cycle_count} sikertelen - várjuk a következő próbálkozást")
+                app.logger.warning(f"[MONITOR] ✗ Ciklus #{cycle_count} sikertelen - várjuk a következő próbálkozást")
             
             # 2 percenkénti ellenőrzés
-            print(f"[MONITOR] Várakozás 120 másodperc a következő ellenőrzésig...")
+            app.logger.debug(f"[MONITOR] Várakozás 120 másodperc a következő ellenőrzésig...")
             time.sleep(120)
             
         except Exception as e:
-            print(f"[MONITOR] ✗ Váratlan hiba: {e}")
+            app.logger.error(f"[MONITOR] ✗ Váratlan hiba: {e}")
             time.sleep(120)  # Hiba esetén is 2 perc várakozás
             
-    print("[MONITOR] Leállítva")
+    app.logger.info("[MONITOR] Leállítva")
 
 # ===== API Endpoints =====
 @app.route('/')
@@ -740,7 +749,7 @@ def mqtt_rediscover():
             'zone_count': len(led_zones)
         })
     except Exception as e:
-        print(f"[MQTT] Rediscovery hiba: {e}")
+        app.logger.error(f"[MQTT] Rediscovery hiba: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/camera/health')
@@ -789,10 +798,10 @@ if __name__ == '__main__':
     
     # MQTT inicializálás
     if init_mqtt():
-        print("[OK] MQTT csatlakozva")
+        app.logger.info("[OK] MQTT csatlakozva")
     else:
-        print("[WARN] MQTT nem elérhető")
+        app.logger.warning("[WARN] MQTT nem elérhető")
     
     # Flask szerver indítása
-    print("\nWebes felület: http://localhost:5001")
+    app.logger.info("Webes felület: http://localhost:5001")
     app.run(host='0.0.0.0', port=5001, debug=False)
