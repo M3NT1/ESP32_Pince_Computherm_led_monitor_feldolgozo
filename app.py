@@ -35,6 +35,8 @@ image_cache_duration = 120  # Cache 2 percig
 camera_timeout = 120  # 2 perces timeout kép letöltéshez
 camera_error_count = 0  # Egymás utáni hibák száma
 last_error_time = 0  # Utolsó hiba időpontja
+last_force_refresh_time = 0  # Utolsó force refresh időpontja
+force_refresh_cooldown = 10  # Minimum 10 másodperc force refresh-ek között
 mqtt_client = None
 camera_lock = threading.Lock()
 
@@ -162,9 +164,23 @@ def capture_frame(force_refresh=False):
         numpy.ndarray vagy None: A kép vagy None hiba esetén
     """
     global last_image, last_image_time, camera_error_count, last_error_time
+    global last_force_refresh_time
+    
+    current_time = time.time()
+    
+    # Rate limiting force_refresh-re - védelem a túlzott kérések ellen
+    if force_refresh:
+        time_since_last_force = current_time - last_force_refresh_time
+        if last_force_refresh_time > 0 and time_since_last_force < force_refresh_cooldown:
+            remaining_cooldown = force_refresh_cooldown - time_since_last_force
+            print(f"[CAM] Rate limit: várj még {remaining_cooldown:.1f} másodpercet a következő friss képig")
+            # Adj vissza cache-elt képet ha van
+            if last_image is not None:
+                return last_image.copy()
+            return None
+        last_force_refresh_time = current_time
     
     # Ha van friss cache-elt kép ÉS nem kényszerítünk frissítést, használjuk azt
-    current_time = time.time()
     if not force_refresh and last_image is not None and (current_time - last_image_time) < image_cache_duration:
         return last_image.copy()
     
@@ -204,16 +220,26 @@ def capture_frame(force_refresh=False):
                 # Multipart stream első frame kinyerése
                 bytes_data = bytes()
                 max_bytes = 1024 * 150  # Max 150KB olvasás (nagyobb felbontáshoz)
-                chunk_timeout_start = time.time()
+                last_chunk_time = time.time()  # Utolsó chunk időpontja
                 
                 for chunk in response.iter_content(chunk_size=2048):
-                    # Chunk szintű timeout ellenőrzés
-                    if time.time() - chunk_timeout_start > camera_timeout:
-                        print(f"[CAM] Timeout chunk olvasás közben")
+                    current_chunk_time = time.time()
+                    
+                    # Chunk szintű timeout ellenőrzés - 30 sec inaktivitás után timeout
+                    time_since_last_chunk = current_chunk_time - last_chunk_time
+                    if time_since_last_chunk > 30:
+                        print(f"[CAM] Timeout: {time_since_last_chunk:.1f}s eltelt az utolsó chunk óta")
                         response.close()
                         raise requests.exceptions.Timeout("Chunk reading timeout")
                     
+                    # Teljes idő ellenőrzés
+                    if current_chunk_time - start_time > camera_timeout:
+                        print(f"[CAM] Timeout: teljes idő ({camera_timeout}s) lejárt")
+                        response.close()
+                        raise requests.exceptions.Timeout("Total timeout exceeded")
+                    
                     bytes_data += chunk
+                    last_chunk_time = current_chunk_time  # Frissítjük az utolsó chunk idejét
                     
                     # JPEG kezdő és vég marker keresése
                     a = bytes_data.find(b'\xff\xd8')
