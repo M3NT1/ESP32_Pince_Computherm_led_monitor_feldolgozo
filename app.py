@@ -709,6 +709,33 @@ def get_annotated_snapshot():
         cv2.putText(img_annotated, text, (list_x, text_y),
                    font, list_font_scale, base_color, list_font_thickness)
     
+    # JOBB ALSÓ SAROK: Kép letöltési időbélyeg (vízjel)
+    if last_image_time > 0:
+        timestamp = datetime.fromtimestamp(last_image_time).strftime('%Y.%m.%d %H:%M')
+        timestamp_text = f"Kep: {timestamp}"
+        
+        # Szöveg méretének mérése
+        timestamp_font_scale = 0.5
+        timestamp_font_thickness = 1
+        (ts_w, ts_h), _ = cv2.getTextSize(timestamp_text, font, timestamp_font_scale, timestamp_font_thickness)
+        
+        # Pozíció számítása (jobb alsó sarok, 10px padding)
+        img_height, img_width = img_annotated.shape[:2]
+        ts_x = img_width - ts_w - 15
+        ts_y = img_height - 10
+        
+        # Félátlátszó fekete háttér a timestamp-nek
+        timestamp_bg_overlay = img_annotated.copy()
+        cv2.rectangle(timestamp_bg_overlay,
+                     (ts_x - 5, ts_y - ts_h - 5),
+                     (ts_x + ts_w + 5, ts_y + 5),
+                     (0, 0, 0), -1)
+        cv2.addWeighted(timestamp_bg_overlay, 0.7, img_annotated, 0.3, 0, img_annotated)
+        
+        # Fehér szöveg
+        cv2.putText(img_annotated, timestamp_text, (ts_x, ts_y),
+                   font, timestamp_font_scale, (255, 255, 255), timestamp_font_thickness)
+    
     _, buffer = cv2.imencode('.jpg', img_annotated)
     return Response(buffer.tobytes(), mimetype='image/jpeg')
 

@@ -1,0 +1,58 @@
+[
+  {
+    "current_state": false,
+    "height": 11,
+    "id": "zone_1769365694979",
+    "last_brightness": 0.0,
+    "last_check": "2026-01-25T22:11:42.661104",
+    "last_state": false,
+    "led_type": "auto",
+    "name": "Nappali",
+    "threshold": 30,
+    "width": 24,
+    "x": 273,
+    "y": 237
+  },
+  {
+    "current_state": false,
+    "height": 11,
+    "id": "zone_1769365708029",
+    "last_brightness": 0.0,
+    "last_check": "2026-01-25T22:11:42.665042",
+    "last_state": false,
+    "led_type": "auto",
+    "name": "Halo",
+    "threshold": 30,
+    "width": 25,
+    "x": 272,
+    "y": 246
+  },
+  {
+    "current_state": false,
+    "height": 13,
+    "id": "zone_1769365734596",
+    "last_brightness": 0.0,
+    "last_check": "2026-01-25T22:11:42.669094",
+    "last_state": false,
+    "led_type": "auto",
+    "name": "Dolgozo",
+    "threshold": 30,
+    "width": 25,
+    "x": 272,
+    "y": 255
+  },
+  {
+    "current_state": false,
+    "height": 11,
+    "id": "zone_1769365743930",
+    "last_brightness": 0.0,
+    "last_check": "2026-01-25T22:11:42.673182",
+    "last_state": false,
+    "led_type": "auto",
+    "name": "Gyerekszoba",
+    "threshold": 30,
+    "width": 17,
+    "x": 275,
+    "y": 266
+  }
+]
