@@ -69,6 +69,7 @@ def load_config():
             MQTT_USER = config.get('mqtt_user', '')
             MQTT_PASSWORD = config.get('mqtt_password', '')
             LOG_LEVEL = config.get('log_level', 'INFO').upper()
+            monitoring_active = config.get('monitoring_active', False)  # Monitorozás állapot betöltése
             
             # Logging szint beállítása
             numeric_level = getattr(logging, LOG_LEVEL, logging.INFO)
@@ -76,6 +77,7 @@ def load_config():
             
             app.logger.info(f"[CONFIG] Betöltve {len(led_zones)} zóna")
             app.logger.info(f"[CONFIG] Log szint: {LOG_LEVEL}")
+            app.logger.info(f"[CONFIG] Monitorozás állapot: {'AKTÍV' if monitoring_active else 'LEÁLLÍTVA'}")
     else:
         app.logger.warning(f"[CONFIG] {CONFIG_FILE} nem található, alapértelmezett értékek használata")
         app.logger.setLevel(logging.INFO)
@@ -88,7 +90,8 @@ def save_config():
         'mqtt_port': MQTT_PORT,
         'mqtt_user': MQTT_USER,
         'mqtt_password': MQTT_PASSWORD,
-        'log_level': LOG_LEVEL
+        'log_level': LOG_LEVEL,
+        'monitoring_active': monitoring_active  # Monitorozás állapotának mentése
     }
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
@@ -424,6 +427,16 @@ def process_frame(force_publish=False):
     return True
 
 # ===== Monitoring szál =====
+def start_monitoring_if_needed():
+    """Monitorozás automatikus indítása ha a config szerint aktív"""
+    global monitoring_active
+    if monitoring_active:
+        app.logger.info("[STARTUP] Monitorozás automatikus indítása...")
+        thread = threading.Thread(target=monitoring_thread, daemon=True)
+        thread.start()
+        return True
+    return False
+
 def monitoring_thread():
     app.logger.info("[MONITOR] Elindítva - 2 percenkénti képellenőrzés")
     cycle_count = 0
@@ -744,6 +757,7 @@ def start_monitoring():
     global monitoring_active
     if not monitoring_active:
         monitoring_active = True
+        save_config()  # Állapot mentése
         thread = threading.Thread(target=monitoring_thread, daemon=True)
         thread.start()
         return jsonify({'success': True, 'message': 'Monitoring elindítva'})
@@ -753,6 +767,7 @@ def start_monitoring():
 def stop_monitoring():
     global monitoring_active
     monitoring_active = False
+    save_config()  # Állapot mentése
     return jsonify({'success': True, 'message': 'Monitoring leállítva'})
 
 @app.route('/api/states')
@@ -828,6 +843,12 @@ if __name__ == '__main__':
         app.logger.info("[OK] MQTT csatlakozva")
     else:
         app.logger.warning("[WARN] MQTT nem elérhető")
+    
+    # Monitorozás automatikus indítása ha a config szerint aktív
+    if start_monitoring_if_needed():
+        app.logger.info("[OK] Monitorozás automatikusan elindítva")
+    else:
+        app.logger.info("[INFO] Monitorozás leállítva - manuális indítás szükséges")
     
     # Flask szerver indítása
     app.logger.info("Webes felület: http://localhost:5001")
