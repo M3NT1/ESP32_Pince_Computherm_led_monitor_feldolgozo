@@ -49,7 +49,7 @@ camera_lock = threading.Lock()
 
 # ===== Konfiguráció betöltése =====
 def load_config():
-    global led_zones, ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, LOG_LEVEL
+    global led_zones, ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, LOG_LEVEL, monitoring_active
     
     # Home Assistant Add-on options ellenőrzése
     addon_options = '/data/options.json'
@@ -69,7 +69,7 @@ def load_config():
             MQTT_USER = config.get('mqtt_user', '')
             MQTT_PASSWORD = config.get('mqtt_password', '')
             LOG_LEVEL = config.get('log_level', 'INFO').upper()
-            monitoring_active = config.get('monitoring_active', False)  # Monitorozás állapot betöltése
+            monitoring_active = config.get('monitoring_active', False)  # Globális monitoring_active frissítése
             
             # Logging szint beállítása
             numeric_level = getattr(logging, LOG_LEVEL, logging.INFO)
@@ -83,6 +83,7 @@ def load_config():
         app.logger.setLevel(logging.INFO)
 
 def save_config():
+    """Konfiguráció mentése - csak ha van mit menteni"""
     config = {
         'zones': led_zones,
         'esp32_cam_url': ESP32_CAM_URL,
@@ -93,6 +94,20 @@ def save_config():
         'log_level': LOG_LEVEL,
         'monitoring_active': monitoring_active  # Monitorozás állapotának mentése
     }
+    
+    # Backup készítése ha vannak zónák
+    if os.path.exists(CONFIG_FILE) and led_zones:
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                old_config = json.load(f)
+                old_zones = old_config.get('zones', [])
+                # Ha a régi configban voltak zónák, de most üres, NE írjuk felül
+                if old_zones and not led_zones:
+                    app.logger.warning("[CONFIG] Nem mentünk üres zones tömböt - meglévő zónák megőrzése")
+                    config['zones'] = old_zones
+        except Exception as e:
+            app.logger.warning(f"[CONFIG] Backup ellenőrzés sikertelen: {e}")
+    
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
     app.logger.info("[CONFIG] Mentve")
@@ -138,6 +153,10 @@ def init_mqtt():
 
 def publish_homeassistant_discovery():
     """Home Assistant auto-discovery konfigurációk publikálása"""
+    if not led_zones:
+        app.logger.warning("[MQTT] Nincs konfigurálandó zóna - discovery kihagyva")
+        return
+    
     for zone in led_zones:
         zone_id = zone['id']
         zone_name = zone['name']
@@ -430,11 +449,16 @@ def process_frame(force_publish=False):
 def start_monitoring_if_needed():
     """Monitorozás automatikus indítása ha a config szerint aktív"""
     global monitoring_active
+    app.logger.info(f"[STARTUP] Monitorozás állapot ellenőrzése: monitoring_active={monitoring_active}")
     if monitoring_active:
+        if not led_zones:
+            app.logger.warning("[STARTUP] Monitorozás NEM indul - nincsenek konfigurált zónák!")
+            return False
         app.logger.info("[STARTUP] Monitorozás automatikus indítása...")
         thread = threading.Thread(target=monitoring_thread, daemon=True)
         thread.start()
         return True
+    app.logger.info("[STARTUP] Monitorozás kikapcsolt állapotban - manuális indítás szükséges")
     return False
 
 def monitoring_thread():
