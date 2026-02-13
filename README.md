@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,14 +8,26 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
+## 🆕 Legújabb frissítés: v1.0.4 (2026.02.13)
+
+**🔧 KRITIKUS JAVÍTÁSOK:**
+- ✅ **Perzisztens zóna tárolás** - A beállított zónák megmaradnak újraindítás után
+- ✅ **Monitoring állapot perzisztencia** - Az automatikus monitoring állapota megmarad
+- ✅ **JSON parsing hiba javítva** - Konfiguráció betöltés mostantól hibátlan
+
+**ℹ️ FONTOS:** Ha korábban elvesztek a zónák újraindítás után, most ez a probléma megoldva!
+
 ## 📋 Funkciók
 
 - 🎥 Valós idejű ESP32-CAM képfeldolgozás
 - 🔴 Többszínű LED detektálás (vörös, zöld, kék, fehér, narancs)
 - 📊 Webes felület a zónák konfigurálásához
+- 💾 **Perzisztens zóna tárolás** - zónák megmaradnak újraindítás után
+- 🔄 **Automatikus monitoring indítás** - az állapot megmarad újraindítás után
 - 🏠 Automatikus Home Assistant integráció MQTT-n keresztül
-- 🔄 Valós idejű állapot frissítés
+- ⚡ Valós idejű állapot frissítés (2 percenként)
 - 📦 Egyszerű telepítés HACS-en keresztül
+- 🔧 Konfigurálható log szintek (DEBUG/INFO/WARNING/ERROR)
 
 ## 🏗️ Architektúra
 
@@ -85,6 +97,12 @@ zones: []
 3. Kattints a **"Zónák szerkesztése"** gombra
 4. Állítsd be a LED zónákat az egérrel húzva
 5. Mentsd el a konfigurációt
+6. ✅ **A zónák automatikusan perzisztensek** - megmaradnak újraindítás után!
+
+### Monitoring indítása
+
+1. A webes felületen kattints a **"Monitoring indítása"** gombra
+2. ✅ **Az állapot automatikusan perzisztens** - újraindítás után is bekapcsolva marad!
 
 ### MQTT konfiguráció
 
@@ -141,11 +159,20 @@ Példa Arduino kód: (ha szükséges, kérd el külön)
 
 ## 🔧 Hibaelhárítás
 
+### Zónák elvesznek újraindítás után (≤ v1.0.3)
+
+✅ **Megoldva v1.0.4-ben!** Frissítsd az add-ont a legújabb verzióra:
+1. **Settings → Add-ons → ESP32-CAM LED Monitor**
+2. Kattints a **"Check for updates"** gombra
+3. Ha elérhető az új verzió, kattints a **"Update"** gombra
+4. Indítsd újra az add-ont
+
 ### Az add-on nem indul el
 
 1. Ellenőrizd a logokat: **Settings → Add-ons → ESP32-CAM LED Monitor → Log**
 2. Ellenőrizd az MQTT kapcsolatot
 3. Ellenőrizd az ESP32-CAM elérhetőségét
+4. Ha "JSON parsing error" látható a logokban, frissítsd v1.0.4-re
 
 ### Az ESP32-CAM nem elérhető
 
@@ -188,7 +215,31 @@ Példa Arduino kód: (ha szükséges, kérd el külön)
 - 📖 **Dokumentáció**: [DOCS.md](DOCS.md)
 - 🔧 **Home Assistant**: https://www.home-assistant.io
 
-## 📄 Licenc
+## � Verzió történet
+
+### v1.0.4 (2026.02.13) - KRITIKUS JAVÍTÁS
+- 🔧 **Perzisztens zóna tárolás** - zónák megmaradnak újraindítás után
+- 🔧 **Monitoring állapot perzisztencia** - automatikus indítás megmarad
+- 🔧 JSON parsing hiba javítása
+- 🔧 Config.json tárolás `/data` könyvtárban
+
+### v1.0.3 (2026.01.25)
+- ⚙️ Konfigurálható log szintek
+- 🔧 Logging optimalizálás production környezethez
+
+### v1.0.2 (2026.01.20)
+- 🌐 Ingress támogatás
+- 🔧 MQTT újraregisztráció funkció
+- 🎨 UI javítások
+
+### v1.0.1 (2026.01.15)
+- 🔧 MQTT kompatibilitási javítások
+- 🔧 Config parsing javítások
+
+### v1.0.0 (2026.01.10)
+- 🎉 Első stabil kiadás
+
+## �📄 Licenc
 
 MIT License
 
