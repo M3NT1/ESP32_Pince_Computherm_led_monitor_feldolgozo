@@ -1,5 +1,5 @@
 name: "ESP32-CAM LED Monitor"
-version: "1.0.3"
+version: "1.0.4"
 slug: esp32cam_led_monitor
 description: "ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz"
 url: "https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"
@@ -24,6 +24,9 @@ hassio_api: true
 hassio_role: default
 map:
   - config:rw
+  - share:rw
+# Perzisztens tárhely az addon saját adatainak (config.json, zónák)
+# A /data mappa automatikusan perzisztens Home Assistant Add-onokban
 options:
   esp32_cam_url: "http://192.168.10.130"
   mqtt_broker: "core-mosquitto"

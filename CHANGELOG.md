@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.4
+
+- **🔧 KRITIKUS JAVÍTÁS**: JSON parsing hiba javítása config.json generáláskor
+- **✨ Új**: Perzisztens zóna tárolás - zónák megmaradnak újraindítás után
+- **✨ Új**: Monitoring állapot perzisztencia - automatikus indítás megmarad
+- **🔧 Javítva**: `run.sh` JSON generálás Python script-re cserélve (biztonságos formázás)
+- **🔧 Javítva**: `monitoring_active` boolean helyes betöltése (string → boolean konverzió)
+- **🔧 Javítva**: Config.json tárolás `/data` könyvtárban (perzisztens volume)
+- **🔧 Javítva**: JSON parse hibák részletes hibaüzenettel
+- **📝 Változás**: Symlink `/app/config.json` → `/data/config.json` (visszafelé kompatibilitás)
+
 ## 1.0.3
 
 - **Új**: Konfigurálható log szint addon beállításokából (DEBUG/INFO/WARNING/ERROR)

@@ -27,7 +27,8 @@ if [ -z "$ZONES" ] || [ "$ZONES" = "null" ]; then
 fi
 
 # INTELLIGENS CONFIG MERGE: meglévő zónák megtartása
-EXISTING_CONFIG="/app/config.json"
+# PERZISZTENS TÁRHELY: /data könyvtár (Home Assistant Add-on perzisztens volume)
+EXISTING_CONFIG="/data/config.json"
 EXISTING_ZONES="[]"
 EXISTING_MONITORING="false"
 
@@ -75,21 +76,53 @@ else
   EXISTING_MONITORING="false"
 fi
 
-# Config.json létrehozása MERGE-elt adatokkal
-cat > /app/config.json <<EOF
-{
-  "esp32_cam_url": "${ESP32_CAM_URL}",
-  "mqtt_broker": "${MQTT_BROKER}",
-  "mqtt_port": ${MQTT_PORT},
-  "mqtt_user": "${MQTT_USER}",
-  "mqtt_password": "${MQTT_PASSWORD}",
-  "log_level": "${LOG_LEVEL}",
-  "zones": ${ZONES},
-  "monitoring_active": ${EXISTING_MONITORING}
-}
-EOF
+# Config.json létrehozása MERGE-elt adatokkal - BIZTONSÁGOS PYTHON MÓDSZER
+python3 - <<PYTHON_SCRIPT
+import json
+import sys
 
-bashio::log.info "Konfiguráció betöltve és merge-elve"
+try:
+    # Zones parse-olása
+    zones_str = '''${ZONES}'''
+    try:
+        zones = json.loads(zones_str) if zones_str.strip() else []
+    except:
+        zones = []
+    
+    # Monitoring boolean parse-olása
+    monitoring_active = '''${EXISTING_MONITORING}'''.lower() == 'true'
+    
+    # Config objektum összeállítása
+    config = {
+        "esp32_cam_url": "${ESP32_CAM_URL}",
+        "mqtt_broker": "${MQTT_BROKER}",
+        "mqtt_port": int(${MQTT_PORT}),
+        "mqtt_user": "${MQTT_USER}",
+        "mqtt_password": "${MQTT_PASSWORD}",
+        "log_level": "${LOG_LEVEL}",
+        "zones": zones,
+        "monitoring_active": monitoring_active
+    }
+    
+    # JSON fájl írása
+    with open('/data/config.json', 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+    
+    print(f"✓ Config.json sikeresen létrehozva ({len(zones)} zóna, monitoring: {monitoring_active})")
+    sys.exit(0)
+except Exception as e:
+    print(f"✗ Hiba a config.json létrehozásakor: {e}", file=sys.stderr)
+    sys.exit(1)
+PYTHON_SCRIPT
+
+if [ $? -eq 0 ]; then
+    bashio::log.info "Konfiguráció betöltve és merge-elve"
+    # Symlink létrehozása /app/config.json -> /data/config.json (visszafelé kompatibilitás)
+    ln -sf /data/config.json /app/config.json
+else
+    bashio::log.error "Hiba a konfiguráció létrehozásakor"
+    exit 1
+fi
 
 # Python alkalmazás indítása
 cd /app

@@ -60,26 +60,46 @@ def load_config():
     
     # Normál config.json betöltése
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-            led_zones = config.get('zones', [])
-            ESP32_CAM_URL = config.get('esp32_cam_url', ESP32_CAM_URL)
-            MQTT_BROKER = config.get('mqtt_broker', MQTT_BROKER)
-            MQTT_PORT = config.get('mqtt_port', MQTT_PORT)
-            MQTT_USER = config.get('mqtt_user', '')
-            MQTT_PASSWORD = config.get('mqtt_password', '')
-            LOG_LEVEL = config.get('log_level', 'INFO').upper()
-            monitoring_active = config.get('monitoring_active', False)  # Globális monitoring_active frissítése
-            
-            # Logging szint beállítása
-            numeric_level = getattr(logging, LOG_LEVEL, logging.INFO)
-            app.logger.setLevel(numeric_level)
-            
-            app.logger.info(f"[CONFIG] Betöltve {len(led_zones)} zóna")
-            app.logger.info(f"[CONFIG] Log szint: {LOG_LEVEL}")
-            app.logger.info(f"[CONFIG] Monitorozás állapot: {'AKTÍV' if monitoring_active else 'LEÁLLÍTVA'}")
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                led_zones = config.get('zones', [])
+                ESP32_CAM_URL = config.get('esp32_cam_url', ESP32_CAM_URL)
+                MQTT_BROKER = config.get('mqtt_broker', MQTT_BROKER)
+                MQTT_PORT = config.get('mqtt_port', MQTT_PORT)
+                MQTT_USER = config.get('mqtt_user', '')
+                MQTT_PASSWORD = config.get('mqtt_password', '')
+                LOG_LEVEL = config.get('log_level', 'INFO').upper()
+                
+                # monitoring_active helyes betöltése - biztosítjuk hogy boolean legyen
+                monitoring_raw = config.get('monitoring_active', False)
+                if isinstance(monitoring_raw, str):
+                    # Ha sztring ("true"/"false"), konvertáljuk boolean-re
+                    monitoring_active = monitoring_raw.lower() in ['true', '1', 'yes']
+                else:
+                    # Már boolean vagy más típus
+                    monitoring_active = bool(monitoring_raw)
+                
+                # Logging szint beállítása
+                numeric_level = getattr(logging, LOG_LEVEL, logging.INFO)
+                app.logger.setLevel(numeric_level)
+                
+                app.logger.info(f"[CONFIG] Betöltve {len(led_zones)} zóna")
+                app.logger.info(f"[CONFIG] Log szint: {LOG_LEVEL}")
+                app.logger.info(f"[CONFIG] Monitorozás állapot: {'AKTÍV' if monitoring_active else 'LEÁLLÍTVA'}")
+        except json.JSONDecodeError as e:
+            app.logger.error(f"[CONFIG] JSON parse hiba a {CONFIG_FILE} fájlban: {e}")
+            app.logger.error(f"[CONFIG] Sor {e.lineno}, oszlop {e.colno}: {e.msg}")
+            app.logger.warning(f"[CONFIG] Alapértelmezett értékek használata")
+            monitoring_active = False
+            app.logger.setLevel(logging.INFO)
+        except Exception as e:
+            app.logger.error(f"[CONFIG] Hiba a konfiguráció betöltésekor: {e}")
+            monitoring_active = False
+            app.logger.setLevel(logging.INFO)
     else:
         app.logger.warning(f"[CONFIG] {CONFIG_FILE} nem található, alapértelmezett értékek használata")
+        monitoring_active = False
         app.logger.setLevel(logging.INFO)
 
 def save_config():
