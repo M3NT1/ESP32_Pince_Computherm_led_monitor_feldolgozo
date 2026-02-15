@@ -474,16 +474,18 @@
             
             event.target.classList.add('active');
             document.getElementById(tabName).classList.add('active');
-            
+
             // Ha monitoring tab, indítsuk az élő képet
             if (tabName === 'monitor') {
                 refreshStates();
                 if (!monitoringInterval) {
+                    // 30 másodpercenként frissítünk - a backend 120mp-es cache-t használ,
+                    // így felesleges gyakrabban kérni (a kép csak 2 percenként változik)
                     monitoringInterval = setInterval(() => {
                         const endpoint = showAnnotations ? '/api/annotated_snapshot' : '/api/snapshot';
                         document.getElementById('liveImage').src = endpoint + '?' + new Date().getTime();
                         refreshStates();
-                    }, 2000);
+                    }, 30000);
                 }
             } else {
                 if (monitoringInterval) {
