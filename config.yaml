@@ -1,5 +1,5 @@
 name: "ESP32-CAM LED Monitor"
-version: "1.0.4"
+version: "1.0.5"
 slug: esp32cam_led_monitor
 description: "ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz"
 url: "https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_feldolgozo"

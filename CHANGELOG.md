@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.5
+
+- **🔧 Javítva**: Automatikus zóna backup mentés külön fájlba (zones_backup.json)
+- **🔧 Javítva**: Zóna helyreállítás backup-ból ha a config.json-ban nincsenek
+- **🔧 Javítva**: Monitoring szál duplikáció megakadályozása
+- **🔧 Javítva**: MQTT reconnect után monitoring újraindítás ha szükséges
+- **📁 Új**: Katasztrófa helyreállítás támogatás zones_backup.json-ból
+
 ## 1.0.4
 
 - **🔧 KRITIKUS JAVÍTÁS**: JSON parsing hiba javítása config.json generáláskor

@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.0.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.0.5-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,14 +8,15 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
-## 🆕 Legújabb frissítés: v1.0.4 (2026.02.13)
+## 🆕 Legújabb frissítés: v1.0.5 (2026.02.19)
 
-**🔧 KRITIKUS JAVÍTÁSOK:**
-- ✅ **Perzisztens zóna tárolás** - A beállított zónák megmaradnak újraindítás után
-- ✅ **Monitoring állapot perzisztencia** - Az automatikus monitoring állapota megmarad
-- ✅ **JSON parsing hiba javítva** - Konfiguráció betöltés mostantól hibátlan
+**🔧 JAVÍTÁSOK:**
+- ✅ **Automatikus zóna backup** - Külön backup fájl a zónák védelmére
+- ✅ **Katasztrófa helyreállítás** - Zónák visszaállítása backup-ból szükség esetén
+- ✅ **Monitoring szál védelem** - Duplikált szálak megakadályozása
+- ✅ **MQTT reconnect fix** - Monitoring újraindul kapcsolat visszaállításkor
 
-**ℹ️ FONTOS:** Ha korábban elvesztek a zónák újraindítás után, most ez a probléma megoldva!
+**ℹ️ FONTOS:** Ez a verzió extra védelmet ad a zóna konfigurációk számára!
 
 ## 📋 Funkciók
 
@@ -216,7 +217,11 @@ Példa Arduino kód: (ha szükséges, kérd el külön)
 - 🔧 **Home Assistant**: https://www.home-assistant.io
 
 ## � Verzió történet
-
+### v1.0.5 (2026.02.19) - Zóna védelem
+- 🔧 Automatikus zóna backup (zones_backup.json)
+- 🔧 Katasztrófa helyreállítás
+- 🔧 Monitoring szál duplikáció fix
+- 🔧 MQTT reconnect monitoring fix
 ### v1.0.4 (2026.02.13) - KRITIKUS JAVÍTÁS
 - 🔧 **Perzisztens zóna tárolás** - zónák megmaradnak újraindítás után
 - 🔧 **Monitoring állapot perzisztencia** - automatikus indítás megmarad
