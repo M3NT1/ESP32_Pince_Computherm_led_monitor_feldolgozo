@@ -76,6 +76,41 @@ else
   EXISTING_MONITORING="false"
 fi
 
+# ===== ZÓNA BACKUP HELYREÁLLÍTÁS =====
+# Ha EXISTING_ZONES üres, próbáljuk a backup fájlból
+ZONES_BACKUP="/data/zones_backup.json"
+if [ "$EXISTING_ZONES" = "[]" ] && [ -f "$ZONES_BACKUP" ]; then
+  bashio::log.info "Zóna backup fájl észlelve - helyreállítás..."
+  EXISTING_ZONES=$(python3 -c "
+import json
+try:
+    with open('$ZONES_BACKUP', 'r') as f:
+        backup = json.load(f)
+        zones = backup.get('zones', [])
+        if zones:
+            print(json.dumps(zones))
+        else:
+            print('[]')
+except:
+    print('[]')
+" 2>/dev/null || echo "[]")
+
+  EXISTING_MONITORING=$(python3 -c "
+import json
+try:
+    with open('$ZONES_BACKUP', 'r') as f:
+        backup = json.load(f)
+        print('true' if backup.get('monitoring_active', False) else 'false')
+except:
+    print('false')
+" 2>/dev/null || echo "false")
+
+  if [ "$EXISTING_ZONES" != "[]" ]; then
+    bashio::log.info "Zónák helyreállítva backup-ból ($(echo $EXISTING_ZONES | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "?") db)"
+    ZONES="$EXISTING_ZONES"
+  fi
+fi
+
 # Config.json létrehozása MERGE-elt adatokkal - BIZTONSÁGOS PYTHON MÓDSZER
 python3 - <<PYTHON_SCRIPT
 import json

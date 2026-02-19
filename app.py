@@ -24,6 +24,8 @@ log.setLevel(logging.WARNING)  # Csak WARNING és ERROR szintű üzenetek
 
 # ===== Konfiguráció =====
 CONFIG_FILE = 'config.json'
+# Zóna backup fájl - HA Add-on esetén /data-ban, egyéb esetben helyi
+ZONES_BACKUP_FILE = '/data/zones_backup.json' if os.path.exists('/data') else 'zones_backup.json'
 ESP32_CAM_URL = 'http://192.168.0.67'  # ESP32-CAM IP címe
 MQTT_BROKER = 'localhost'
 MQTT_PORT = 1883
@@ -36,6 +38,7 @@ LOG_LEVEL = 'INFO'  # Alapértelmezett log szint
 led_zones = []
 led_states = {}
 monitoring_active = False
+monitoring_thread_obj = None  # Monitoring szál referenciája
 last_image = None
 last_image_time = 0
 image_cache_duration = 120  # Cache 2 percig
@@ -102,6 +105,21 @@ def load_config():
         monitoring_active = False
         app.logger.setLevel(logging.INFO)
 
+    # Ha nincs zóna a config-ban, próbáljuk betölteni a backup-ból
+    if not led_zones and os.path.exists(ZONES_BACKUP_FILE):
+        try:
+            with open(ZONES_BACKUP_FILE, 'r', encoding='utf-8') as f:
+                backup = json.load(f)
+                backup_zones = backup.get('zones', [])
+                if backup_zones:
+                    led_zones = backup_zones
+                    # Csak ha még nem lett beállítva
+                    if not monitoring_active:
+                        monitoring_active = backup.get('monitoring_active', False)
+                    app.logger.info(f"[CONFIG] {len(led_zones)} zóna visszaállítva backup fájlból!")
+        except Exception as e:
+            app.logger.warning(f"[CONFIG] Backup betöltés sikertelen: {e}")
+
 def save_config():
     """Konfiguráció mentése - csak ha van mit menteni"""
     config = {
@@ -132,12 +150,25 @@ def save_config():
         json.dump(config, f, indent=2, ensure_ascii=False)
     app.logger.info("[CONFIG] Mentve")
 
+    # Zóna backup mentése külön fájlba (katasztrófa helyreállítás)
+    if led_zones:
+        try:
+            with open(ZONES_BACKUP_FILE, 'w', encoding='utf-8') as f:
+                json.dump({'zones': led_zones, 'monitoring_active': monitoring_active}, f, indent=2, ensure_ascii=False)
+            app.logger.debug(f"[CONFIG] Zóna backup mentve: {ZONES_BACKUP_FILE}")
+        except Exception as e:
+            app.logger.warning(f"[CONFIG] Zóna backup mentés sikertelen: {e}")
+
 # ===== MQTT Kapcsolat =====
 def on_mqtt_connect(client, userdata, flags, rc):
     if rc == 0:
         app.logger.info(f"[MQTT] Kapcsolódva: {MQTT_BROKER}:{MQTT_PORT}")
         # Auto-discovery üzenetek küldése Home Assistant számára
         publish_homeassistant_discovery()
+        # Monitoring szál-check: ha kellene futnia és nem fut, indítjuk el
+        if monitoring_active and (monitoring_thread_obj is None or not monitoring_thread_obj.is_alive()):
+            app.logger.info("[MQTT] Monitoring szál reconnect után nem fut - újraindítás...")
+            start_monitoring_if_needed()
     else:
         app.logger.error(f"[MQTT] Kapcsolódási hiba: {rc}")
 
@@ -468,16 +499,22 @@ def process_frame(force_publish=False):
 # ===== Monitoring szál =====
 def start_monitoring_if_needed():
     """Monitorozás automatikus indítása ha a config szerint aktív"""
-    global monitoring_active
+    global monitoring_active, monitoring_thread_obj
     app.logger.info(f"[STARTUP] Monitorozás állapot ellenőrzése: monitoring_active={monitoring_active}")
     if monitoring_active:
         if not led_zones:
             app.logger.warning("[STARTUP] Monitorozás NEM indul - nincsenek konfigurált zónák!")
             return False
-        app.logger.info("[STARTUP] Monitorozás automatikus indítása...")
-        thread = threading.Thread(target=monitoring_thread, daemon=True)
-        thread.start()
-        return True
+        # Csak akkor indít új szálat, ha nem fut már
+        if monitoring_thread_obj is None or not monitoring_thread_obj.is_alive():
+            app.logger.info("[STARTUP] Monitorozás automatikus indítása...")
+            thread = threading.Thread(target=monitoring_thread, daemon=True)
+            thread.start()
+            monitoring_thread_obj = thread
+            return True
+        else:
+            app.logger.info("[STARTUP] Monitoring szál már fut")
+            return True
     app.logger.info("[STARTUP] Monitorozás kikapcsolt állapotban - manuális indítás szükséges")
     return False
 
@@ -798,12 +835,14 @@ def get_annotated_snapshot():
 
 @app.route('/api/monitoring/start', methods=['POST'])
 def start_monitoring():
-    global monitoring_active
-    if not monitoring_active:
+    global monitoring_active, monitoring_thread_obj
+    if not monitoring_active or monitoring_thread_obj is None or not monitoring_thread_obj.is_alive():
         monitoring_active = True
         save_config()  # Állapot mentése
-        thread = threading.Thread(target=monitoring_thread, daemon=True)
-        thread.start()
+        if monitoring_thread_obj is None or not monitoring_thread_obj.is_alive():
+            thread = threading.Thread(target=monitoring_thread, daemon=True)
+            thread.start()
+            monitoring_thread_obj = thread
         return jsonify({'success': True, 'message': 'Monitoring elindítva'})
     return jsonify({'success': False, 'message': 'Már fut'})
 
