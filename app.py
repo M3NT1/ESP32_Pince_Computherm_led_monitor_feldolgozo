@@ -308,65 +308,34 @@ def capture_frame(force_refresh=False):
         try:
             # 2 perces timeout - ESP32-CAM lehet lassú
             response = requests.get(
-                f"{ESP32_CAM_URL}/", 
-                stream=True, 
+                f"{ESP32_CAM_URL}/capture", 
                 timeout=camera_timeout,
                 headers={'Connection': 'close'}  # Ne tartsa nyitva a kapcsolatot
             )
             
             if response.status_code == 200:
-                # Multipart stream első frame kinyerése
-                bytes_data = bytes()
-                max_bytes = 1024 * 150  # Max 150KB olvasás (nagyobb felbontáshoz)
-                last_chunk_time = time.time()  # Utolsó chunk időpontja
+                # Közvetlen JPEG feldolgozás a /capture végpontról
+                image_data = response.content
+                img = cv2.imdecode(np.frombuffer(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
                 
-                for chunk in response.iter_content(chunk_size=2048):
-                    current_chunk_time = time.time()
+                if img is not None:
+                    elapsed = time.time() - start_time
+                    app.logger.debug(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
                     
-                    # Chunk szintű timeout ellenőrzés - 30 sec inaktivitás után timeout
-                    time_since_last_chunk = current_chunk_time - last_chunk_time
-                    if time_since_last_chunk > 30:
-                        app.logger.warning(f"[CAM] Timeout: {time_since_last_chunk:.1f}s eltelt az utolsó chunk óta")
-                        response.close()
-                        raise requests.exceptions.Timeout("Chunk reading timeout")
+                    # Sikeres letöltés - reset error counter
+                    camera_error_count = 0
+                    last_error_time = 0
                     
-                    # Teljes idő ellenőrzés
-                    if current_chunk_time - start_time > camera_timeout:
-                        app.logger.warning(f"[CAM] Timeout: teljes idő ({camera_timeout}s) lejárt")
-                        response.close()
-                        raise requests.exceptions.Timeout("Total timeout exceeded")
-                    
-                    bytes_data += chunk
-                    last_chunk_time = current_chunk_time  # Frissítjük az utolsó chunk idejét
-                    
-                    # JPEG kezdő és vég marker keresése
-                    a = bytes_data.find(b'\xff\xd8')
-                    b = bytes_data.find(b'\xff\xd9')
-                    
-                    if a != -1 and b != -1:
-                        jpg = bytes_data[a:b+2]
-                        # Dekódolás
-                        img = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                        if img is not None:
-                            elapsed = time.time() - start_time
-                            app.logger.debug(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
-                            
-                            # Sikeres letöltés - reset error counter
-                            camera_error_count = 0
-                            last_error_time = 0
-                            
-                            last_image = img.copy()
-                            last_image_time = time.time()
-                            response.close()  # Kapcsolat lezárása
-                            return img
-                    
-                    # Védelem túl nagy letöltés ellen
-                    if len(bytes_data) > max_bytes:
-                        app.logger.warning(f"[CAM] Max méret elérve ({max_bytes} bytes)")
-                        break
-                
-                response.close()
-                app.logger.warning(f"[CAM] ✗ Nem található érvényes JPEG adat a válaszban")
+                    last_image = img.copy()
+                    last_image_time = time.time()
+                    return img
+                else:
+                    app.logger.warning(f"[CAM] ✗ Nem sikerült dekódolni a kapott képet")
+            elif response.status_code == 429:
+                app.logger.warning(f"[CAM] Rate limit (429) - ESP32-CAM túlterhelés védelem aktív")
+                # Ilyenkor nem növeljük a hiba számlálót, csak használjuk a gyorsítótárat
+                if last_image is not None:
+                    return last_image.copy()
             else:
                 app.logger.error(f"[CAM] ✗ HTTP hiba: {response.status_code}")
                 
