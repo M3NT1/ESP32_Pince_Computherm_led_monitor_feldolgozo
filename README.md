@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.0.5-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,15 +8,15 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
-## 🆕 Legújabb frissítés: v1.0.5 (2026.02.19)
+## 🆕 Legújabb frissítés: v1.1.0 (2026.03.14)
 
-**🔧 JAVÍTÁSOK:**
-- ✅ **Automatikus zóna backup** - Külön backup fájl a zónák védelmére
-- ✅ **Katasztrófa helyreállítás** - Zónák visszaállítása backup-ból szükség esetén
-- ✅ **Monitoring szál védelem** - Duplikált szálak megakadályozása
-- ✅ **MQTT reconnect fix** - Monitoring újraindul kapcsolat visszaállításkor
+**🚀 ÚJDONSÁGOK ÉS JAVÍTÁSOK:**
+- ✅ **ESPHome firmware támogatás** - Opcionális beállítás a beépített Custom ESP32 Firmware mellett (`firmware_type: "esphome"`).
+- ✅ **Kamera hozzáférés és Rate-Limit finomhangolás** - Ha valaki letiltja az API-t vagy nézi az élő stream-et (HTTP 500 Stream Lock), helyreálló logolás a sikertelen kísérletek "büntetése" (backoff) nélkül, gyorsítótár használatával.
+- ✅ **Lokális Teszt / Dummy Szerver** - Kifejlesztésre került a `dummy_esp32_server.py`, ami megkönnyíti a lokális tesztelést ESP32 hardver beiktatása nélkül.
+- 🔧 **Előző funkciók**: zóna backup, watchdog védelem és automatikus monitoring indítás.
 
-**ℹ️ FONTOS:** Ez a verzió extra védelmet ad a zóna konfigurációk számára!
+**ℹ️ FONTOS:** Megjelent az opcionális firmware_type konfiguráció az Add-on panelen!
 
 ## 📋 Funkciók
 
@@ -88,8 +88,11 @@ mqtt_broker: "core-mosquitto"
 mqtt_port: 1883
 mqtt_user: ""
 mqtt_password: ""
+firmware_type: "custom"
 zones: []
 ```
+
+- **firmware_type**: Lehet `custom` (Arduino firmware a `/capture` végponttal) vagy `esphome` (ESPHome alapú webserver a megadott URL portján kikerülve a UI-t, jellemzően 8080-on: `http://192.168.10.130:8080`).
 
 ### LED zónák beállítása
 
@@ -154,9 +157,14 @@ automation:
 
 ## 📱 ESP32-CAM konfiguráció
 
-Az ESP32-CAM-et úgy kell beállítani, hogy HTTP stream-et szolgáltasson a `/` endpointon.
+A projekt mellé mellékeltünk kétféle támogatott ESP32 firmware opciót:
+1. **Custom Arduino firmware (`.ino`)**: Dedikált `/capture` végponttal, Stream-elési HTTP Lock (500) okos visszaadással és Rate Limitinggel (429).
+2. **ESPHome hibrid megoldás (`esphome_cam.yaml`)**: Lehetővé teszi az Over-the-Air frissítéseket, dedikált képalkotó webszerver futtatásával aminek csak paraméterezzük az URL-t.
 
-Példa Arduino kód: (ha szükséges, kérd el külön)
+A kódokat a [Firmware Repository](https://github.com/M3NT1/ESP32_Pince_Computherm_led_monitor_firmware)-ban találod meg részletes leírásokkal.
+
+### 🧪 Lokális Tesztelés (Dummy Szerver)
+Opcionálisan indítható egy dummy ESP32 webszerver Pythonban (dummy_esp32_server.py), ami mindkét firmware típust szimulálja a feldolgozó tesztelésének segítésére anélkül, hogy flashelni kellene hardvert.
 
 ## 🔧 Hibaelhárítás
 
@@ -216,7 +224,11 @@ Példa Arduino kód: (ha szükséges, kérd el külön)
 - 📖 **Dokumentáció**: [DOCS.md](DOCS.md)
 - 🔧 **Home Assistant**: https://www.home-assistant.io
 
-## � Verzió történet
+## Verzió történet
+### v1.1.0 (2026.03.14) - ESPHome és Konfiguráció Bővítés
+- 🎉 **ESPHome Firmware támogatás** bevezetése (firmware_type konfiguráció hozzáadva).
+- 🔧 Rate-limit optimalizáció és "Kamera Stream Használatban (HTTP 500)" hiba elegáns ignorálása cache-ből a backoff csúsztatás generálása nélkül.
+- 🔧 Lokális tesztekhez a `dummy_esp32_server.py` implementálása.
 ### v1.0.5 (2026.02.19) - Zóna védelem
 - 🔧 Automatikus zóna backup (zones_backup.json)
 - 🔧 Katasztrófa helyreállítás
@@ -368,5 +380,5 @@ MIT License - Szabadon használható és módosítható.
 ---
 
 **Készítette**: ESP32-CAM LED Monitor Projekt  
-**Verzió**: 1.0.0  
-**Utolsó frissítés**: 2026. január 24.
+**Verzió**: 1.1.0  
+**Utolsó frissítés**: 2026. március 14.
