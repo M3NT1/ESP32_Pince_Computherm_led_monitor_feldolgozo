@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- **🎉 Új**: ESPHome firmware támogatás bevezetése (`firmware_type` konfigurálási lehetőség).
+- **🔧 Javítva**: Szimulált ESP32 szerver (`dummy_esp32_server.py`) hozzáadva a lokális tesztelésekhez hardver megkötés nélkül.
+- **🔧 Javítva**: Rate-limit finomhangolások - "Kamera Stream Használatban" (HTTP 500) okos lekezelése cache használatával, büntetési (backoff) ciklusok növelése nélkül.
+
 ## 1.0.5
 
 - **🔧 Javítva**: Automatikus zóna backup mentés külön fájlba (zones_backup.json)
