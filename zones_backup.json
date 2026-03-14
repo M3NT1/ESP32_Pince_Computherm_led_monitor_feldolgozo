@@ -1,0 +1,31 @@
+{
+  "zones": [
+    {
+      "id": "zone_1769264636227",
+      "name": "gyerek",
+      "x": 122,
+      "y": 87.5,
+      "width": 56,
+      "height": 53,
+      "threshold": 30,
+      "led_type": "auto",
+      "last_brightness": 0.0,
+      "last_state": false,
+      "last_check": "2026-01-24T15:25:21.626621"
+    },
+    {
+      "id": "zone_1769264641182",
+      "name": "halo",
+      "x": 162,
+      "y": 161.5,
+      "width": 68,
+      "height": 75,
+      "threshold": 30,
+      "led_type": "auto",
+      "last_brightness": 115.1,
+      "last_state": true,
+      "last_check": "2026-01-24T15:25:21.626871"
+    }
+  ],
+  "monitoring_active": true
+}
