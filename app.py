@@ -33,6 +33,7 @@ MQTT_USER = 'M3NT1'  # Ha szükséges
 MQTT_PASSWORD = 'mqttzigbeejelszo'  # Ha szükséges
 MQTT_TOPIC_PREFIX = 'homeassistant/binary_sensor/led_monitor'
 LOG_LEVEL = 'INFO'  # Alapértelmezett log szint
+FIRMWARE_TYPE = 'custom'  # 'custom' = Arduino (/capture), 'esphome' = ESPHome (/)
 
 # ===== Globális változók =====
 led_zones = []
@@ -73,6 +74,7 @@ def load_config():
                 MQTT_USER = config.get('mqtt_user', '')
                 MQTT_PASSWORD = config.get('mqtt_password', '')
                 LOG_LEVEL = config.get('log_level', 'INFO').upper()
+                FIRMWARE_TYPE = config.get('firmware_type', 'custom').lower()
                 
                 # monitoring_active helyes betöltése - biztosítjuk hogy boolean legyen
                 monitoring_raw = config.get('monitoring_active', False)
@@ -130,6 +132,7 @@ def save_config():
         'mqtt_user': MQTT_USER,
         'mqtt_password': MQTT_PASSWORD,
         'log_level': LOG_LEVEL,
+        'firmware_type': FIRMWARE_TYPE,
         'monitoring_active': monitoring_active  # Monitorozás állapotának mentése
     }
     
@@ -307,14 +310,18 @@ def capture_frame(force_refresh=False):
         
         try:
             # 2 perces timeout - ESP32-CAM lehet lassú
+            # API endpoint meghatározása a firmware típustól függően
+            endpoint = "/capture" if FIRMWARE_TYPE == "custom" else "/"
+            camera_url = f"{ESP32_CAM_URL.rstrip('/')}{endpoint}"
+            
             response = requests.get(
-                f"{ESP32_CAM_URL}/capture", 
+                camera_url, 
                 timeout=camera_timeout,
                 headers={'Connection': 'close'}  # Ne tartsa nyitva a kapcsolatot
             )
             
             if response.status_code == 200:
-                # Közvetlen JPEG feldolgozás a /capture végpontról
+                # Közvetlen JPEG feldolgozás
                 image_data = response.content
                 img = cv2.imdecode(np.frombuffer(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
                 
@@ -336,8 +343,13 @@ def capture_frame(force_refresh=False):
                 # Ilyenkor nem növeljük a hiba számlálót, csak használjuk a gyorsítótárat
                 if last_image is not None:
                     return last_image.copy()
+            elif response.status_code == 500 and "mar hasznalatban".lower() in response.text.lower():
+                # Új Custom firmware védelem: kamera stream-et nézik
+                app.logger.info(f"[CAM] Kamera használatban (Stream aktív) - utolsó ismert kép használata a cache-ből.")
+                if last_image is not None:
+                    return last_image.copy()
             else:
-                app.logger.error(f"[CAM] ✗ HTTP hiba: {response.status_code}")
+                app.logger.error(f"[CAM] ✗ HTTP hiba: {response.status_code} - {camera_url}")
                 
         except requests.exceptions.Timeout:
             elapsed = time.time() - start_time
@@ -531,12 +543,13 @@ def get_config():
         'esp32_cam_url': ESP32_CAM_URL,
         'mqtt_broker': MQTT_BROKER,
         'mqtt_port': MQTT_PORT,
+        'firmware_type': FIRMWARE_TYPE,
         'monitoring_active': monitoring_active
     })
 
 @app.route('/api/config', methods=['POST'])
 def update_config():
-    global ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD
+    global ESP32_CAM_URL, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, FIRMWARE_TYPE
     data = request.json
     
     ESP32_CAM_URL = data.get('esp32_cam_url', ESP32_CAM_URL)
@@ -544,6 +557,7 @@ def update_config():
     MQTT_PORT = data.get('mqtt_port', MQTT_PORT)
     MQTT_USER = data.get('mqtt_user', '')
     MQTT_PASSWORD = data.get('mqtt_password', '')
+    FIRMWARE_TYPE = data.get('firmware_type', FIRMWARE_TYPE)
     
     save_config()
     return jsonify({'success': True})
