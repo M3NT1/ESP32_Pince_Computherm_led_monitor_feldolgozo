@@ -34,7 +34,6 @@ options:
   mqtt_user: ""
   mqtt_password: ""
   log_level: "INFO"
-  firmware_type: "custom"
   zones: []
 schema:
   esp32_cam_url: str
@@ -43,7 +42,6 @@ schema:
   mqtt_user: str?
   mqtt_password: password?
   log_level: list(DEBUG|INFO|WARNING|ERROR)?
-  firmware_type: list(custom|esphome)?
   zones: 
     - name: str
       id: str
