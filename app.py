@@ -311,8 +311,16 @@ def capture_frame(force_refresh=False):
         try:
             # 2 perces timeout - ESP32-CAM lehet lassú
             # API endpoint meghatározása a firmware típustól függően
-            endpoint = "/capture" if FIRMWARE_TYPE == "custom" else "/"
-            camera_url = f"{ESP32_CAM_URL.rstrip('/')}{endpoint}"
+            if FIRMWARE_TYPE == "custom":
+                endpoint = "/capture"
+                camera_url = f"{ESP32_CAM_URL.rstrip('/')}{endpoint}"
+            else:
+                # ESPHome esetében a port általában 8080, és a gyökér adja a snapshotot
+                # Ha a felhasználó nem írt be portot a 192.168.0.x után, pótoljuk automatikusan, mert az ESPHome oda teszi a képet
+                base_url = ESP32_CAM_URL.rstrip('/')
+                if "8080" not in base_url and FIRMWARE_TYPE == "esphome":
+                    base_url = f"{base_url}:8080"
+                camera_url = base_url
             
             response = requests.get(
                 camera_url, 
