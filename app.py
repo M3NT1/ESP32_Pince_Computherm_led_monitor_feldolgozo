@@ -33,7 +33,7 @@ MQTT_USER = 'M3NT1'  # Ha szükséges
 MQTT_PASSWORD = 'mqttzigbeejelszo'  # Ha szükséges
 MQTT_TOPIC_PREFIX = 'homeassistant/binary_sensor/led_monitor'
 LOG_LEVEL = 'INFO'  # Alapértelmezett log szint
-FIRMWARE_TYPE = 'custom'  # 'custom' = Arduino (/capture), 'esphome' = ESPHome (/)
+FIRMWARE_TYPE = 'esphome'  # Mostantól kizárólag ESPHome firmware-t támogat
 
 # ===== Globális változók =====
 led_zones = []
@@ -74,7 +74,7 @@ def load_config():
                 MQTT_USER = config.get('mqtt_user', '')
                 MQTT_PASSWORD = config.get('mqtt_password', '')
                 LOG_LEVEL = config.get('log_level', 'INFO').upper()
-                FIRMWARE_TYPE = config.get('firmware_type', 'custom').lower()
+                # A firmware_type opciót már nem használjuk aktívan, de kompatibilitás miatt beolvassuk ha van
                 
                 # monitoring_active helyes betöltése - biztosítjuk hogy boolean legyen
                 monitoring_raw = config.get('monitoring_active', False)
@@ -310,17 +310,12 @@ def capture_frame(force_refresh=False):
         
         try:
             # 2 perces timeout - ESP32-CAM lehet lassú
-            # API endpoint meghatározása a firmware típustól függően
-            if FIRMWARE_TYPE == "custom":
-                endpoint = "/capture"
-                camera_url = f"{ESP32_CAM_URL.rstrip('/')}{endpoint}"
-            else:
-                # ESPHome esetében a port általában 8080, és a gyökér adja a snapshotot
-                # Ha a felhasználó nem írt be portot a 192.168.0.x után, pótoljuk automatikusan, mert az ESPHome oda teszi a képet
-                base_url = ESP32_CAM_URL.rstrip('/')
-                if "8080" not in base_url and FIRMWARE_TYPE == "esphome":
-                    base_url = f"{base_url}:8080"
-                camera_url = base_url
+            # Csak ESPHome támogatott, a gyökér (/) adja a snapshotot
+            # Ha a felhasználó nem írt be portot a 192.168.0.x után, pótoljuk automatikusan, mert az ESPHome oda teszi a képet
+            base_url = ESP32_CAM_URL.rstrip('/')
+            if "8080" not in base_url:
+                base_url = f"{base_url}:8080"
+            camera_url = base_url
             
             response = requests.get(
                 camera_url, 

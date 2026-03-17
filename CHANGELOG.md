@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- **🗑️ Eltávolítva**: Régi "Custom Framework" (/capture) végpont támogatása véglegesen kikerült a kódbázisból.
+- **✨ Új**: Kizárólagos, natív ESPHome API (port 8080) és snapshot végpont (/) támogatás a stabilitás érdekében.
+- **🔧 Javítva**: Számos felesleges kód, konfiguráció és argumentum törölve a letisztultabb logika érdekében.
 ## 1.1.2
 
 - **🔧 Javítva**: ESPHome API hívás kritikus javítása: `/capture` végpont helyett automatikusan az ESPHome gyökér `/` végpontja (port 8080) kerül meghívásra snapshot készítésekor. Automatikus `:8080` hozzáfűzés a meglévő IP-hez kényelmi funkcióként. (Hotfix az 1.1.1-hez)

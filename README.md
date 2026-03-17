@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,12 +8,13 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
-## 🆕 Legújabb frissítés: v1.1.2 (2026.03.17)
+## 🆕 Legújabb frissítés: v1.1.3 (2026.03.17)
 
 **🚀 ÚJDONSÁGOK ÉS JAVÍTÁSOK:**
-- 🔧 **Bugfix (Hotfix):** ESPHome API hívás kritikus javítása: `/capture` végpont helyett valós időben felülbírálva az ESPHome gyökér `/` végpontja kerül meghívásra, automatikus `:8080` port hozzáfűzéssel a megadott IP-hez.
-- 🔧 **Bugfix:** A `firmware_type` (ESPHome/Custom) választó értékének hiányzó beolvasása javítva.
-- ✅ **ESPHome firmware támogatás** - Opcionális beállítás a beépített Custom ESP32 Firmware mellett (`firmware_type: "esphome"`).
+- 🗑️ **Eltávolítva:** A régi, megbízhatatlan "Custom Firmware" (`/capture`) támogatás végleges eltávolítása. A projekt mostantól kizárólag a hivatalos ESPHome natív konfigurációkat támogatja!
+- ✨ **Új:** Dedikált ESPHome API és snapshot integráció. A webes felület és a Háttér addon azonnal, tizedmásodperc alatt tölti be az élő képet az ESPHome-ról (`:8080`).
+- ✅ **Új:** Automatikus portkezelés - az add-on konfigurációban már elegendő csak az IP címet megadni, az alkalmazás automatikusan hozzáfűzi az ESPHome számára szükséges `8080`-as HTTP szerver portot.
+- ✅ **Kamera hozzáférés és Rate-Limit finomhangolás** - Ha valaki letiltja az API-t vagy nézi az élő stream-et (HTTP 500 Stream Lock), helyreálló logolás a sikertelen kísérletek "büntetése" (backoff) nélkül, gyorsítótár használatával.
 - ✅ **Kamera hozzáférés és Rate-Limit finomhangolás** - Ha valaki letiltja az API-t vagy nézi az élő stream-et (HTTP 500 Stream Lock), helyreálló logolás a sikertelen kísérletek "büntetése" (backoff) nélkül, gyorsítótár használatával.
 - ✅ **Lokális Teszt / Dummy Szerver** - Kifejlesztésre került a `dummy_esp32_server.py`, ami megkönnyíti a lokális tesztelést ESP32 hardver beiktatása nélkül.
 - 🔧 **Előző funkciók**: zóna backup, watchdog védelem és automatikus monitoring indítás.
@@ -382,5 +383,5 @@ MIT License - Szabadon használható és módosítható.
 ---
 
 **Készítette**: ESP32-CAM LED Monitor Projekt  
-**Verzió**: 1.1.2  
+**Verzió**: 1.1.3  
 **Utolsó frissítés**: 2026. március 17.
