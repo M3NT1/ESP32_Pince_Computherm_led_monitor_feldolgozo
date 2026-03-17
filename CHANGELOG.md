@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2
+
+- **🔧 Javítva**: ESPHome API hívás kritikus javítása: `/capture` végpont helyett automatikusan az ESPHome gyökér `/` végpontja (port 8080) kerül meghívásra snapshot készítésekor. Automatikus `:8080` hozzáfűzés a meglévő IP-hez kényelmi funkcióként. (Hotfix az 1.1.1-hez)
 ## 1.1.1
 
 - **🔧 Javítva**: `firmware_type` (ESPHome/Custom) választó értékének hiányzó beolvasása és átadása a `run.sh` scriptben, ami miatt az app mindig a `/capture` végpontot kereste. (Bugfix az 1.1.0-hoz)

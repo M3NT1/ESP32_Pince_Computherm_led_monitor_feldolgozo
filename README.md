@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,10 +8,11 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
-## 🆕 Legújabb frissítés: v1.1.1 (2026.03.17)
+## 🆕 Legújabb frissítés: v1.1.2 (2026.03.17)
 
 **🚀 ÚJDONSÁGOK ÉS JAVÍTÁSOK:**
-- 🔧 **Bugfix:** A `firmware_type` (ESPHome/Custom) választó értékének hiányzó beolvasása javítva, így az ESPHome beállítás hibátlanul csatlakozik a snapshot végponthoz.
+- 🔧 **Bugfix (Hotfix):** ESPHome API hívás kritikus javítása: `/capture` végpont helyett valós időben felülbírálva az ESPHome gyökér `/` végpontja kerül meghívásra, automatikus `:8080` port hozzáfűzéssel a megadott IP-hez.
+- 🔧 **Bugfix:** A `firmware_type` (ESPHome/Custom) választó értékének hiányzó beolvasása javítva.
 - ✅ **ESPHome firmware támogatás** - Opcionális beállítás a beépített Custom ESP32 Firmware mellett (`firmware_type: "esphome"`).
 - ✅ **Kamera hozzáférés és Rate-Limit finomhangolás** - Ha valaki letiltja az API-t vagy nézi az élő stream-et (HTTP 500 Stream Lock), helyreálló logolás a sikertelen kísérletek "büntetése" (backoff) nélkül, gyorsítótár használatával.
 - ✅ **Lokális Teszt / Dummy Szerver** - Kifejlesztésre került a `dummy_esp32_server.py`, ami megkönnyíti a lokális tesztelést ESP32 hardver beiktatása nélkül.
@@ -381,5 +382,5 @@ MIT License - Szabadon használható és módosítható.
 ---
 
 **Készítette**: ESP32-CAM LED Monitor Projekt  
-**Verzió**: 1.1.1  
+**Verzió**: 1.1.2  
 **Utolsó frissítés**: 2026. március 17.
