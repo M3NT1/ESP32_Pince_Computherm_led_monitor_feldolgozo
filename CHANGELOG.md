@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- **🔧 Javítva**: `firmware_type` (ESPHome/Custom) választó értékének hiányzó beolvasása és átadása a `run.sh` scriptben, ami miatt az app mindig a `/capture` végpontot kereste. (Bugfix az 1.1.0-hoz)
+
 ## 1.1.0
 
 - **🎉 Új**: ESPHome firmware támogatás bevezetése (`firmware_type` konfigurálási lehetőség).

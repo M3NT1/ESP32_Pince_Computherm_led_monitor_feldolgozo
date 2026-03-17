@@ -15,10 +15,12 @@ MQTT_PORT=$(bashio::config 'mqtt_port')
 MQTT_USER=$(bashio::config 'mqtt_user')
 MQTT_PASSWORD=$(bashio::config 'mqtt_password')
 LOG_LEVEL=$(bashio::config 'log_level' 'INFO')
+FIRMWARE_TYPE=$(bashio::config 'firmware_type' 'custom')
 
 bashio::log.info "ESP32-CAM URL: ${ESP32_CAM_URL}"
 bashio::log.info "MQTT Broker: ${MQTT_BROKER}:${MQTT_PORT}"
 bashio::log.info "Log Level: ${LOG_LEVEL}"
+bashio::log.info "Firmware Type: ${FIRMWARE_TYPE}"
 
 # Zones konfiguráció biztonságos beolvasása
 ZONES=$(bashio::config 'zones' '[]')
@@ -135,6 +137,7 @@ try:
         "mqtt_user": "${MQTT_USER}",
         "mqtt_password": "${MQTT_PASSWORD}",
         "log_level": "${LOG_LEVEL}",
+        "firmware_type": "${FIRMWARE_TYPE}",
         "zones": zones,
         "monitoring_active": monitoring_active
     }
