@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4
+
+- **🔧 Javítva**: Fejjel lefelé megjelenő (180 fokkal elforgatott) kamerakép problémájának javítása fizikai orientáció miatt az OpenCV elforgatásával.
 ## 1.1.3
 
 - **🗑️ Eltávolítva**: Régi "Custom Framework" (/capture) végpont támogatása véglegesen kikerült a kódbázisból.

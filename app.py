@@ -329,6 +329,11 @@ def capture_frame(force_refresh=False):
                 img = cv2.imdecode(np.frombuffer(image_data, dtype=np.uint8), cv2.IMREAD_COLOR)
                 
                 if img is not None:
+                    # ESPHome v2 (vagy fizikai beépítésből adódóan) fejjel lefelé van a kamera
+                    # Kép 180 fokos elforgatása a helyes megjelenítéshez
+                    img = cv2.rotate(img, cv2.ROTATE_180)
+                
+                if img is not None:
                     elapsed = time.time() - start_time
                     app.logger.debug(f"[CAM] ✓ Kép sikeresen letöltve ({elapsed:.1f}s)")
                     

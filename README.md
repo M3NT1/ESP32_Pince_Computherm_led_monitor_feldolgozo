@@ -1,6 +1,6 @@
 # ESP32-CAM LED Monitor - Home Assistant Add-on
 
-![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.4-blue.svg)
 ![Supports aarch64 Architecture](https://img.shields.io/badge/aarch64-yes-green.svg)
 ![Supports amd64 Architecture](https://img.shields.io/badge/amd64-yes-green.svg)
 ![Supports armhf Architecture](https://img.shields.io/badge/armhf-yes-green.svg)
@@ -8,9 +8,10 @@
 
 ESP32-CAM alapú LED állapot monitor Computherm fűtésszabályozóhoz, Home Assistant integrációval.
 
-## 🆕 Legújabb frissítés: v1.1.3 (2026.03.17)
+## 🆕 Legújabb frissítés: v1.1.4 (2026.03.17)
 
 **🚀 ÚJDONSÁGOK ÉS JAVÍTÁSOK:**
+- 🔧 **Bugfix:** A fejjel lefelé fordított kamerakép javítása (180 fokos OpenCV elforgatással) a helyes orientációért az Add-on UI-on és feldolgozóban is.
 - 🗑️ **Eltávolítva:** A régi, megbízhatatlan "Custom Firmware" (`/capture`) támogatás végleges eltávolítása. A projekt mostantól kizárólag a hivatalos ESPHome natív konfigurációkat támogatja!
 - ✨ **Új:** Dedikált ESPHome API és snapshot integráció. A webes felület és a Háttér addon azonnal, tizedmásodperc alatt tölti be az élő képet az ESPHome-ról (`:8080`).
 - ✅ **Új:** Automatikus portkezelés - az add-on konfigurációban már elegendő csak az IP címet megadni, az alkalmazás automatikusan hozzáfűzi az ESPHome számára szükséges `8080`-as HTTP szerver portot.
@@ -383,5 +384,5 @@ MIT License - Szabadon használható és módosítható.
 ---
 
 **Készítette**: ESP32-CAM LED Monitor Projekt  
-**Verzió**: 1.1.3  
+**Verzió**: 1.1.4  
 **Utolsó frissítés**: 2026. március 17.
